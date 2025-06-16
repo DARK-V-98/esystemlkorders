@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,8 @@ export default function LoginPage() {
       await signInWithGoogle();
       toast({ title: "Signed In", description: "Successfully signed in with Google." });
       router.push('/');
-    } catch (error: any) {
+    } catch (error: any)
+{
       console.error(error);
        toast({
         variant: "destructive",
