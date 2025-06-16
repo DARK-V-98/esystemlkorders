@@ -3,7 +3,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListOrdered, LogOut, LogIn, UserCircle } from "lucide-react";
+import { 
+  ListOrdered, LogOut, LogIn, UserCircle, Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard 
+} from "lucide-react";
 import {
   Sidebar,
   SidebarHeader,
@@ -12,35 +14,67 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  // SidebarTrigger, // Not used currently as sidebar is always open for authenticated users
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
+import type { AuthUser } from "@/types"; // Import AuthUser for role type if needed
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
   matchExact?: boolean;
+  allowedRoles?: Array<AuthUser['role']>; // For future role-based visibility
 }
 
-// Initial nav items, will be expanded based on roles later
 const navItems: NavItem[] = [
-  { href: "/", label: "Orders", icon: ListOrdered, matchExact: true },
-  // Add more navigation items here if needed in the future
-  // e.g. { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  // { href: "/clients", label: "Clients", icon: Users },
+  { href: "/menu", label: "Dashboard", icon: LayoutDashboard, matchExact: true },
+  { href: "/", label: "Orders", icon: ListOrdered },
+  { 
+    href: "/packages", 
+    label: "Packages", 
+    icon: Package,
+    // allowedRoles: ['user', 'developer', 'admin'] // Example for later
+  },
+  { 
+    href: "/packages/create", 
+    label: "Create Package", 
+    icon: PlusCircle,
+    // allowedRoles: ['developer', 'admin']
+  },
+  { 
+    href: "/custom-pack", 
+    label: "Custom Pack", 
+    icon: Settings,
+    // allowedRoles: ['developer', 'admin']
+  },
+  { 
+    href: "/vip", 
+    label: "VIP Access", 
+    icon: Gem,
+    // allowedRoles: ['admin'] // Or specific VIP role
+  },
+  { 
+    href: "/admin", 
+    label: "Admin Console", 
+    icon: ShieldCheck,
+    // allowedRoles: ['admin']
+  },
 ];
 
 export function SidebarNavigation() {
   const pathname = usePathname();
   const { user, signOutUser, loading } = useAuth();
 
-  // If loading auth state or no user (which implies redirect to login is happening),
-  // you might want to render a slimmed-down sidebar or nothing.
-  // For now, the ProtectedLayoutContent handles the main loading/redirect.
-  // This component will render once user state is resolved and user is present.
+  // const visibleNavItems = navItems.filter(item => {
+  //   if (!item.allowedRoles) return true; // Show if no roles restriction
+  //   if (!user || !user.role) return false; // Hide if user has no role and item requires one
+  //   return item.allowedRoles.includes(user.role);
+  // });
+  // For now, show all items
+  const visibleNavItems = navItems;
+
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left">
@@ -63,11 +97,17 @@ export function SidebarNavigation() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = item.matchExact ? pathname === item.href : pathname.startsWith(item.href);
+            // Add more specific active logic if needed, e.g., for /packages and /packages/create
+            // const isActive = item.matchExact 
+            // ? pathname === item.href 
+            // : (pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'));
+
+
             return (
               <SidebarMenuItem key={item.label}>
-                <Link href={item.href}>
+                <Link href={item.href} legacyBehavior={false} passHref={false}>
                   <SidebarMenuButton
                     isActive={isActive}
                     tooltip={{ children: item.label, side: "right", align: "center" }}
@@ -94,7 +134,7 @@ export function SidebarNavigation() {
           <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
            <Avatar className="h-9 w-9">
              {user.photoURL ? (
-                <AvatarImage src={user.photoURL} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar" />
+                <AvatarImage src={user.photoURL} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar"/>
              ) : (
                 <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
                   {user.email?.[0]?.toUpperCase() || <UserCircle size={20}/>}
@@ -105,17 +145,19 @@ export function SidebarNavigation() {
              <span className="text-sm font-medium text-sidebar-foreground truncate max-w-[150px]" title={user.email || undefined}>
                 {user.displayName || user.email}
             </span>
+            <span className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
+                Role: {user.role || 'N/A'}
+            </span>
             <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={signOutUser} 
-                className="text-xs text-sidebar-foreground/70 hover:text-sidebar-primary hover:bg-sidebar-accent/50 justify-start p-0 h-auto group-data-[collapsible=icon]:hidden"
+                className="text-xs text-sidebar-foreground/70 hover:text-sidebar-primary hover:bg-sidebar-accent/50 justify-start p-0 h-auto mt-0.5 group-data-[collapsible=icon]:hidden"
                 title="Sign Out"
             >
                 <LogOut className="mr-1.5 h-3.5 w-3.5"/> Sign Out
              </Button>
            </div>
-           {/* Icon-only sign out for collapsed sidebar */}
             <Button 
                 variant="ghost" 
                 size="icon" 

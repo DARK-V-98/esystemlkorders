@@ -8,7 +8,7 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut,
-  createUserWithEmailAndPassword, // Import for sign-up
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   type User as FirebaseUser,
   type AuthProvider as FirebaseAuthProvider
@@ -22,7 +22,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string) => Promise<void>; // New sign-up method
+  signUpWithEmail: (email: string, pass: string) => Promise<void>;
   signOutUser: () => Promise<void>;
 }
 
@@ -36,11 +36,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
+        // TODO: In a real app, fetch role from Firestore (e.g., custom claims or user profile collection)
+        // For now, defaulting to 'user'. This would be the place to implement role fetching logic.
+        const userRole: AuthUser['role'] = 'user'; 
+
         const appUser: AuthUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
+          role: userRole,
         };
         setUser(appUser);
       } else {
@@ -57,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider as FirebaseAuthProvider);
+      // Redirect is handled by useEffect in login page or ProtectedLayoutContent
     } catch (error) {
       console.error("Error signing in with Google:", error);
       throw error; 
@@ -67,20 +73,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
+      // Redirect is handled by useEffect in login page or ProtectedLayoutContent
     } catch (error) {
       console.error("Error signing in with email:", error);
       throw error;
     }
   };
 
-  const signUpWithEmail = async (email: string, pass: string) => { // New function
+  const signUpWithEmail = async (email: string, pass: string) => {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting the user and redirecting
+      // Redirect is handled by onAuthStateChanged and useEffect in login page
     } catch (error) {
       console.error("Error signing up with email:", error);
-      throw error; // Re-throw to be caught by the form
+      throw error;
     }
   };
 

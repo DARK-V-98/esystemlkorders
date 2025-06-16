@@ -29,12 +29,11 @@ export interface SortConfig {
   direction: 'ascending' | 'descending';
 }
 
-// New type for authenticated user
+// Updated AuthUser to include role
 export interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  // Roles can be added here later, e.g., role?: 'user' | 'developer' | 'admin';
-  role?: string; // Placeholder for roles for now
+  role?: 'user' | 'developer' | 'admin' | string; // Added role, string for flexibility if more roles are added
 }
