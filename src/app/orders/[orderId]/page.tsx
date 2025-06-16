@@ -2,7 +2,6 @@
 import { fetchOrderById, formatDate } from "@/lib/data";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Badge } from "@/components/ui/badge"; // No longer used directly for features
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, DollarSign, Briefcase, Users, Mail, Globe, Server, ListChecks, FileText, Package, User, Tag, HelpCircle } from "lucide-react";
@@ -108,24 +107,26 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
           <div className="space-y-4 lg:col-span-1 border-t md:border-t-0 md:border-l md:pl-8 pt-6 md:pt-0">
             <h3 className="text-xl font-semibold text-accent flex items-center mb-3">
-              <ListChecks className="mr-2 h-5 w-5"/>Requested Features
+              <ListChecks className="mr-2 h-5 w-5"/>
+              Requested Features 
+              {order.requestedFeatures && order.requestedFeatures.length > 0 ? ` (${order.requestedFeatures.length})` : ''}
             </h3>
             {order.requestedFeatures && order.requestedFeatures.length > 0 ? (
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                 {order.requestedFeatures.map((feature: SelectedFeatureInOrder, index) => (
-                  <Card key={index} className="p-3 bg-muted/30 text-sm">
+                  <Card key={index} className="p-3 bg-muted/30 text-sm rounded-lg shadow-sm">
                     <div className="flex justify-between items-center">
                         <p className="font-medium text-foreground">{feature.name}</p>
                         <p className="font-semibold text-primary">
                             {feature.currencySymbol}{feature.price.toLocaleString()}
                         </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">ID: {feature.id} ({feature.currency.toUpperCase()})</p>
+                    <p className="text-xs text-muted-foreground mt-1">ID: {feature.id} ({feature.currency.toUpperCase()})</p>
                   </Card>
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">No specific features listed for this order.</p>
+              <p className="text-muted-foreground">No specific features were selected for this order.</p>
             )}
           </div>
         </CardContent>
@@ -167,3 +168,4 @@ function DetailItem({ icon: Icon, label, value, className, isLink }: DetailItemP
     </div>
   );
 }
+
