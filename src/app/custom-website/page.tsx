@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Palette, Server, Settings, Smartphone, DollarSign, Briefcase, User, Mail, FileText, BarChart3, CreditCard, Users, ShieldCheck, MapPin, DatabaseZap } from 'lucide-react';
+import { Palette, Server, Settings, Smartphone, DollarSign, Briefcase, User, Mail, FileText, BarChart3, CreditCard, Users, ShieldCheck, MapPin, DatabaseZap, FileStack } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 interface FeatureOption {
@@ -26,6 +26,8 @@ interface FeatureCategory {
   icon: React.ElementType;
   features: FeatureOption[];
 }
+
+const PRICE_PER_PAGE = 50; // Example price per page
 
 const FEATURE_CATEGORIES: FeatureCategory[] = [
   {
@@ -77,6 +79,7 @@ interface CustomerDetails {
   email: string;
   projectName: string;
   projectDescription: string;
+  numberOfPages: string; // Changed to string to match input value, parse to number when calculating
 }
 
 export default function MakeCustomWebsitePage() {
@@ -87,6 +90,7 @@ export default function MakeCustomWebsitePage() {
     email: '',
     projectName: '',
     projectDescription: '',
+    numberOfPages: '1', // Default to 1 page
   });
   const { toast } = useToast();
 
@@ -99,8 +103,12 @@ export default function MakeCustomWebsitePage() {
         }
       });
     });
+    const numPages = parseInt(customerDetails.numberOfPages, 10);
+    if (!isNaN(numPages) && numPages > 0) {
+      currentTotal += numPages * PRICE_PER_PAGE;
+    }
     setTotalPrice(currentTotal);
-  }, [selectedFeatures]);
+  }, [selectedFeatures, customerDetails.numberOfPages]);
 
   const handleFeatureToggle = (featureId: string) => {
     setSelectedFeatures(prev => ({
@@ -123,11 +131,13 @@ export default function MakeCustomWebsitePage() {
       category.features.filter(feature => selectedFeatures[feature.id])
     );
 
-    if (selectedFeatureDetails.length === 0) {
+    const numPages = parseInt(customerDetails.numberOfPages, 10);
+
+    if (selectedFeatureDetails.length === 0 && (isNaN(numPages) || numPages <= 0)) {
       toast({
         variant: "destructive",
-        title: "No Features Selected",
-        description: "Please select at least one feature for your custom website.",
+        title: "No Features or Pages Selected",
+        description: "Please select at least one feature or specify the number of pages for your custom website.",
       });
       return;
     }
@@ -139,15 +149,23 @@ export default function MakeCustomWebsitePage() {
       });
       return;
     }
+    if (isNaN(numPages) || numPages < 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Number of Pages",
+        description: "Please enter a valid number for pages (0 or more).",
+      });
+      return;
+    }
 
 
     console.log("Custom Website Request Submitted:");
-    console.log("Customer Details:", customerDetails);
+    console.log("Customer Details:", { ...customerDetails, numberOfPages: numPages });
     console.log("Selected Features:", selectedFeatureDetails);
     console.log("Total Estimated Price: $", totalPrice);
 
     // TODO: Implement actual submission to backend (e.g., Firestore)
-    // Example: await createCustomOrder({ ...customerDetails, features: selectedFeatureDetails, totalPrice });
+    // Example: await createCustomOrder({ ...customerDetails, numberOfPages: numPages, features: selectedFeatureDetails, totalPrice });
 
     toast({
       title: "Request Submitted!",
@@ -156,7 +174,7 @@ export default function MakeCustomWebsitePage() {
 
     // Reset form
     setSelectedFeatures({});
-    setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '' });
+    setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '', numberOfPages: '1' });
   };
 
   return (
@@ -219,6 +237,23 @@ export default function MakeCustomWebsitePage() {
                 required 
                 className="mt-1"
               />
+            </div>
+            <div>
+              <Label htmlFor="numberOfPages" className="font-semibold">Number of Pages</Label>
+              <div className="flex items-center mt-1">
+                <FileStack className="h-5 w-5 text-muted-foreground mr-2" />
+                <Input 
+                  id="numberOfPages" 
+                  name="numberOfPages" 
+                  type="number"
+                  min="0"
+                  value={customerDetails.numberOfPages}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 5" 
+                  required 
+                />
+              </div>
+               <p className="text-xs text-muted-foreground mt-1">Each page costs an additional ${PRICE_PER_PAGE}.</p>
             </div>
             <div className="md:col-span-2">
               <Label htmlFor="projectDescription" className="font-semibold">Project Description</Label>
@@ -313,4 +348,5 @@ export default function MakeCustomWebsitePage() {
     </div>
   );
 }
+
 
