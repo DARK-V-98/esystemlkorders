@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
   ListOrdered, LogOut, LogIn, UserCircle, Package, Palette, Settings, Gem, ShieldCheck, LayoutDashboard 
-} from "lucide-react"; // Changed PlusCircle to Palette
+} from "lucide-react";
 import {
   Sidebar,
   SidebarHeader,
@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
 import type { AuthUser } from "@/types"; 
+import { CurrencySwitcher } from "./currency-switcher"; // Import CurrencySwitcher
+import { Separator } from "./ui/separator"; // Import Separator
 
 interface NavItem {
   href: string;
@@ -39,7 +41,7 @@ const navItems: NavItem[] = [
   { 
     href: "/custom-website", 
     label: "Make Custom Website", 
-    icon: Palette, // Changed icon
+    icon: Palette,
   },
   { 
     href: "/custom-pack", 
@@ -62,11 +64,6 @@ export function SidebarNavigation() {
   const pathname = usePathname();
   const { user, signOutUser, loading } = useAuth();
 
-  // const visibleNavItems = navItems.filter(item => {
-  //   if (!item.allowedRoles) return true; 
-  //   if (!user || !user.role) return false; 
-  //   return item.allowedRoles.includes(user.role);
-  // });
   const visibleNavItems = navItems;
 
 
@@ -110,7 +107,16 @@ export function SidebarNavigation() {
           })}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-4 mt-auto">
+      <SidebarFooter className="p-4 mt-auto space-y-3">
+        <div className="group-data-[collapsible=icon]:hidden">
+          <CurrencySwitcher />
+        </div>
+        <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center hidden">
+           <CurrencySwitcher /> {/* Also show collapsed version */}
+        </div>
+        
+        <Separator className="bg-sidebar-border group-data-[collapsible=icon]:hidden" />
+        
         {loading ? (
           <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
             <UserCircle className="h-9 w-9 text-sidebar-foreground/50 animate-pulse" />

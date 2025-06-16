@@ -5,7 +5,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
-import { ProtectedLayoutContent } from '@/components/protected-layout'; // Import the new component
+import { CurrencyProvider } from '@/contexts/currency-context'; // Import CurrencyProvider
+import { ProtectedLayoutContent } from '@/components/protected-layout';
 import type { ReactNode } from 'react';
 
 
@@ -28,9 +29,11 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          <ProtectedLayoutContent>
-            {children}
-          </ProtectedLayoutContent>
+          <CurrencyProvider> {/* Wrap with CurrencyProvider */}
+            <ProtectedLayoutContent>
+              {children}
+            </ProtectedLayoutContent>
+          </CurrencyProvider>
         </AuthProvider>
         <Toaster />
       </body>

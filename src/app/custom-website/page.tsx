@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DynamicIcon } from '@/components/icons';
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from '@/contexts/currency-context'; // Import useCurrency
 
 // Updated Price structure
 export interface Price {
@@ -22,7 +23,7 @@ export interface FeatureOption {
   id: string;
   name: string;
   description: string;
-  price: Price; // Updated
+  price: Price; 
   iconName?: string;
 }
 
@@ -34,10 +35,8 @@ export interface FeatureCategory {
   features: FeatureOption[];
 }
 
-// Updated PRICE_PER_PAGE with USD and LKR
 export const PRICE_PER_PAGE: Price = { usd: 50, lkr: 15000 };
 
-// Updated FEATURE_CATEGORIES with USD and LKR prices
 export const FEATURE_CATEGORIES: FeatureCategory[] = [
   {
     id: "frontend-development",
@@ -95,9 +94,6 @@ interface CustomerDetails {
   numberOfPages: string;
 }
 
-// For now, selectedCurrency will be hardcoded to 'usd'. This will be dynamic later.
-const TEMP_SELECTED_CURRENCY: keyof Price = 'usd'; 
-
 export default function MakeCustomWebsitePage() {
   const [selectedFeatures, setSelectedFeatures] = useState<Record<string, boolean>>({});
   const [totalPrice, setTotalPrice] = useState<number>(0);
@@ -109,22 +105,23 @@ export default function MakeCustomWebsitePage() {
     numberOfPages: '1',
   });
   const { toast } = useToast();
+  const { selectedCurrency, currencySymbol } = useCurrency(); // Use currency context
 
   useEffect(() => {
     let currentTotal = 0;
     FEATURE_CATEGORIES.forEach(category => {
       category.features.forEach(feature => {
         if (selectedFeatures[feature.id]) {
-          currentTotal += feature.price[TEMP_SELECTED_CURRENCY]; // Use selected currency
+          currentTotal += feature.price[selectedCurrency]; // Use selected currency
         }
       });
     });
     const numPages = parseInt(customerDetails.numberOfPages, 10);
     if (!isNaN(numPages) && numPages > 0) {
-      currentTotal += numPages * PRICE_PER_PAGE[TEMP_SELECTED_CURRENCY]; // Use selected currency
+      currentTotal += numPages * PRICE_PER_PAGE[selectedCurrency]; // Use selected currency
     }
     setTotalPrice(currentTotal);
-  }, [selectedFeatures, customerDetails.numberOfPages]);
+  }, [selectedFeatures, customerDetails.numberOfPages, selectedCurrency]);
 
   const handleFeatureToggle = (featureId: string) => {
     setSelectedFeatures(prev => ({
@@ -176,20 +173,18 @@ export default function MakeCustomWebsitePage() {
 
     console.log("Custom Website Request Submitted:");
     console.log("Customer Details:", { ...customerDetails, numberOfPages: numPages });
-    console.log("Selected Features:", selectedFeatureDetails.map(f => ({id: f.id, name: f.name, price: f.price })));
-    console.log(`Total Estimated Price (${TEMP_SELECTED_CURRENCY.toUpperCase()}): `, totalPrice);
+    console.log("Selected Features:", selectedFeatureDetails.map(f => ({id: f.id, name: f.name, price: f.price[selectedCurrency] })));
+    console.log(`Total Estimated Price (${selectedCurrency.toUpperCase()}): `, totalPrice);
 
 
     toast({
       title: "Request Submitted!",
-      description: `Your custom website request for "${customerDetails.projectName}" has been submitted. Total (${TEMP_SELECTED_CURRENCY.toUpperCase()}): ${totalPrice.toLocaleString()}. We'll be in touch!`,
+      description: `Your custom website request for "${customerDetails.projectName}" has been submitted. Total (${selectedCurrency.toUpperCase()}): ${currencySymbol}${totalPrice.toLocaleString()}. We'll be in touch!`,
     });
 
     setSelectedFeatures({});
     setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '', numberOfPages: '1' });
   };
-
-  const currencySymbol = TEMP_SELECTED_CURRENCY === 'usd' ? '$' : 'Rs.';
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
@@ -201,7 +196,7 @@ export default function MakeCustomWebsitePage() {
           </h1>
         </div>
         <p className="text-muted-foreground text-lg">
-          Select the features you need and get an instant price estimate.
+          Select the features you need and get an instant price estimate in {selectedCurrency.toUpperCase()}.
         </p>
       </header>
 
@@ -268,7 +263,7 @@ export default function MakeCustomWebsitePage() {
                 />
               </div>
                <p className="text-xs text-muted-foreground mt-1">
-                 Each page costs an additional {currencySymbol}{PRICE_PER_PAGE[TEMP_SELECTED_CURRENCY].toLocaleString()}.
+                 Each page costs an additional {currencySymbol}{PRICE_PER_PAGE[selectedCurrency].toLocaleString()}.
                </p>
             </div>
             <div className="md:col-span-2">
@@ -328,7 +323,7 @@ export default function MakeCustomWebsitePage() {
                             </div>
                             <div className="mt-auto pt-3 text-right">
                                 <p className="text-lg font-semibold text-primary">
-                                  {currencySymbol}{feature.price[TEMP_SELECTED_CURRENCY].toLocaleString()}
+                                  {currencySymbol}{feature.price[selectedCurrency].toLocaleString()}
                                 </p>
                             </div>
                           </CardContent>
@@ -346,7 +341,7 @@ export default function MakeCustomWebsitePage() {
           <CardHeader>
             <div className="flex items-center space-x-3">
                 <DynamicIcon name="DollarSign" className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Estimated Total ({TEMP_SELECTED_CURRENCY.toUpperCase()})</CardTitle>
+                <CardTitle className="text-2xl">Estimated Total ({selectedCurrency.toUpperCase()})</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="text-center">
@@ -367,5 +362,3 @@ export default function MakeCustomWebsitePage() {
     </div>
   );
 }
-
-    
