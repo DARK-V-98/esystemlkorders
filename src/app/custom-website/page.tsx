@@ -216,184 +216,202 @@ export default function MakeCustomWebsitePage() {
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
-      <header className="mb-8 text-center md:text-left">
-        <div className="flex items-center justify-center md:justify-start space-x-3 mb-2">
-          <DynamicIcon name="Palette" className="h-10 w-10 text-primary" />
-          <h1 className="text-4xl font-bold font-headline text-primary">
-            Build Your Custom Website
-          </h1>
-        </div>
-        <p className="text-muted-foreground text-lg">
-          Select the features you need and get an instant price estimate in {selectedCurrency.toUpperCase()}.
-        </p>
-      </header>
+      {/* Combined Header and Top Right Total Display */}
+      <div className="relative">
+        <div className="flex flex-col md:flex-row justify-between md:items-start gap-6 mb-6">
+          <header className="flex-grow text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start space-x-3 mb-2">
+              <DynamicIcon name="Palette" className="h-10 w-10 text-primary" />
+              <h1 className="text-4xl font-bold font-headline text-primary">
+                Build Your Custom Website
+              </h1>
+            </div>
+            <p className="text-muted-foreground text-lg">
+              Select the features you need and get an instant price estimate in {selectedCurrency.toUpperCase()}.
+            </p>
+          </header>
 
-      <form onSubmit={handleSubmit} className="space-y-10">
-        <Card className="shadow-lg rounded-xl overflow-hidden">
-          <CardHeader className="bg-primary/5">
-            <div className="flex items-center space-x-3">
-              <DynamicIcon name="Briefcase" className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl">Your Project Details</CardTitle>
+          {/* Top Right Sticky Total - Visible on MD and up */}
+          <div className="hidden md:block p-4 shadow-lg rounded-xl bg-card border border-border sticky top-6 z-20 self-start md:min-w-[280px]">
+            <div className="flex items-center space-x-2 mb-1">
+              <DynamicIcon name="DollarSign" className="h-5 w-5 text-primary" />
+              <p className="text-sm font-semibold text-muted-foreground">Estimated Total ({selectedCurrency.toUpperCase()})</p>
             </div>
-            <CardDescription>Tell us about your project and how to reach you.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor="projectName" className="font-semibold">Project Name</Label>
-              <Input
-                id="projectName"
-                name="projectName"
-                value={customerDetails.projectName}
-                onChange={handleInputChange}
-                placeholder="e.g., My Awesome Startup Site"
-                required
-                className="mt-1"
-                disabled={isSubmitting}
-              />
-            </div>
-             <div>
-              <Label htmlFor="name" className="font-semibold">Your Name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={customerDetails.name}
-                onChange={handleInputChange}
-                placeholder="John Doe"
-                required
-                className="mt-1"
-                disabled={isSubmitting}
-              />
-            </div>
-            <div>
-              <Label htmlFor="email" className="font-semibold">Your Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={customerDetails.email}
-                onChange={handleInputChange}
-                placeholder="you@example.com"
-                required
-                className="mt-1"
-                disabled={isSubmitting}
-              />
-            </div>
-            <div>
-              <Label htmlFor="numberOfPages" className="font-semibold">Number of Pages</Label>
-              <div className="flex items-center mt-1">
-                <DynamicIcon name="FileStack" className="h-5 w-5 text-muted-foreground mr-2" />
+            <p className="text-3xl font-bold text-primary text-right">
+              {currencySymbol}{totalPrice.toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 text-right">As you select options</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-10">
+          <Card className="shadow-lg rounded-xl overflow-hidden">
+            <CardHeader className="bg-primary/5">
+              <div className="flex items-center space-x-3">
+                <DynamicIcon name="Briefcase" className="h-6 w-6 text-primary" />
+                <CardTitle className="text-2xl">Your Project Details</CardTitle>
+              </div>
+              <CardDescription>Tell us about your project and how to reach you.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="projectName" className="font-semibold">Project Name</Label>
                 <Input
-                  id="numberOfPages"
-                  name="numberOfPages"
-                  type="number"
-                  min="0"
-                  value={customerDetails.numberOfPages}
+                  id="projectName"
+                  name="projectName"
+                  value={customerDetails.projectName}
                   onChange={handleInputChange}
-                  placeholder="e.g., 5"
+                  placeholder="e.g., My Awesome Startup Site"
                   required
+                  className="mt-1"
                   disabled={isSubmitting}
                 />
               </div>
-               <p className="text-xs text-muted-foreground mt-1">
-                 Each page costs an additional {currencySymbol}{pricePerPage[selectedCurrency].toLocaleString()}.
-               </p>
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="projectDescription" className="font-semibold">Project Description</Label>
-              <Textarea
-                id="projectDescription"
-                name="projectDescription"
-                value={customerDetails.projectDescription}
-                onChange={handleInputChange}
-                placeholder="Briefly describe your website, its goals, and any specific requirements."
-                rows={4}
-                className="mt-1"
-                disabled={isSubmitting}
-              />
-            </div>
-          </CardContent>
-        </Card>
+               <div>
+                <Label htmlFor="name" className="font-semibold">Your Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={customerDetails.name}
+                  onChange={handleInputChange}
+                  placeholder="John Doe"
+                  required
+                  className="mt-1"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div>
+                <Label htmlFor="email" className="font-semibold">Your Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={customerDetails.email}
+                  onChange={handleInputChange}
+                  placeholder="you@example.com"
+                  required
+                  className="mt-1"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div>
+                <Label htmlFor="numberOfPages" className="font-semibold">Number of Pages</Label>
+                <div className="flex items-center mt-1">
+                  <DynamicIcon name="FileStack" className="h-5 w-5 text-muted-foreground mr-2" />
+                  <Input
+                    id="numberOfPages"
+                    name="numberOfPages"
+                    type="number"
+                    min="0"
+                    value={customerDetails.numberOfPages}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 5"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+                 <p className="text-xs text-muted-foreground mt-1">
+                   Each page costs an additional {currencySymbol}{pricePerPage[selectedCurrency].toLocaleString()}.
+                 </p>
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="projectDescription" className="font-semibold">Project Description</Label>
+                <Textarea
+                  id="projectDescription"
+                  name="projectDescription"
+                  value={customerDetails.projectDescription}
+                  onChange={handleInputChange}
+                  placeholder="Briefly describe your website, its goals, and any specific requirements."
+                  rows={4}
+                  className="mt-1"
+                  disabled={isSubmitting}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-lg rounded-xl overflow-hidden">
-          <CardHeader className="bg-primary/5">
-             <div className="flex items-center space-x-3">
-                <DynamicIcon name="Settings" className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Select Features</CardTitle>
-            </div>
-            <CardDescription>Choose the components and services for your website.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Accordion type="multiple" defaultValue={featureCategories.map(cat => cat.id)} className="w-full">
-              {featureCategories.map((category) => (
-                <AccordionItem value={category.id} key={category.id} className="border-b last:border-b-0">
-                  <AccordionTrigger className="px-6 py-4 hover:bg-muted/50 transition-colors" disabled={isSubmitting}>
-                    <div className="flex items-center space-x-3">
-                      <DynamicIcon name={category.iconName} className="h-5 w-5 text-primary" />
-                      <span className="text-lg font-medium">{category.name}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-2 sm:px-4 md:px-6 py-4 bg-background">
-                    <p className="text-sm text-muted-foreground mb-4 ml-1">{category.description}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {category.features.map((feature) => (
-                        <Card key={feature.id} className={`transition-all duration-200 rounded-lg overflow-hidden ${selectedFeatures[feature.id] ? 'border-primary ring-2 ring-primary shadow-md' : 'hover:shadow-md'}`}>
-                          <CardContent className="p-4 flex flex-col h-full">
-                            <div className="flex items-start space-x-3">
-                              <Checkbox
-                                id={feature.id}
-                                checked={!!selectedFeatures[feature.id]}
-                                onCheckedChange={() => handleFeatureToggle(feature.id)}
-                                className="mt-1 shrink-0"
-                                aria-label={`Select ${feature.name}`}
-                                disabled={isSubmitting}
-                              />
-                              <div className="flex-grow">
-                                <Label htmlFor={feature.id} className="font-semibold text-base flex items-center cursor-pointer">
-                                  {feature.iconName && <DynamicIcon name={feature.iconName} className="h-4 w-4 mr-2 text-muted-foreground" />}
-                                  {feature.name}
-                                </Label>
-                                <p className="text-xs text-muted-foreground mt-1">{feature.description}</p>
+          <Card className="shadow-lg rounded-xl overflow-hidden">
+            <CardHeader className="bg-primary/5">
+               <div className="flex items-center space-x-3">
+                  <DynamicIcon name="Settings" className="h-6 w-6 text-primary" />
+                  <CardTitle className="text-2xl">Select Features</CardTitle>
+              </div>
+              <CardDescription>Choose the components and services for your website.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Accordion type="multiple" defaultValue={featureCategories.map(cat => cat.id)} className="w-full">
+                {featureCategories.map((category) => (
+                  <AccordionItem value={category.id} key={category.id} className="border-b last:border-b-0">
+                    <AccordionTrigger className="px-6 py-4 hover:bg-muted/50 transition-colors" disabled={isSubmitting}>
+                      <div className="flex items-center space-x-3">
+                        <DynamicIcon name={category.iconName} className="h-5 w-5 text-primary" />
+                        <span className="text-lg font-medium">{category.name}</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-2 sm:px-4 md:px-6 py-4 bg-background">
+                      <p className="text-sm text-muted-foreground mb-4 ml-1">{category.description}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {category.features.map((feature) => (
+                          <Card key={feature.id} className={`transition-all duration-200 rounded-lg overflow-hidden ${selectedFeatures[feature.id] ? 'border-primary ring-2 ring-primary shadow-md' : 'hover:shadow-md'}`}>
+                            <CardContent className="p-4 flex flex-col h-full">
+                              <div className="flex items-start space-x-3">
+                                <Checkbox
+                                  id={feature.id}
+                                  checked={!!selectedFeatures[feature.id]}
+                                  onCheckedChange={() => handleFeatureToggle(feature.id)}
+                                  className="mt-1 shrink-0"
+                                  aria-label={`Select ${feature.name}`}
+                                  disabled={isSubmitting}
+                                />
+                                <div className="flex-grow">
+                                  <Label htmlFor={feature.id} className="font-semibold text-base flex items-center cursor-pointer">
+                                    {feature.iconName && <DynamicIcon name={feature.iconName} className="h-4 w-4 mr-2 text-muted-foreground" />}
+                                    {feature.name}
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground mt-1">{feature.description}</p>
+                                </div>
                               </div>
-                            </div>
-                            <div className="mt-auto pt-3 text-right">
-                                <p className="text-lg font-semibold text-primary">
-                                  {currencySymbol}{feature.price[selectedCurrency].toLocaleString()}
-                                </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </CardContent>
-        </Card>
+                              <div className="mt-auto pt-3 text-right">
+                                  <p className="text-lg font-semibold text-primary">
+                                    {currencySymbol}{feature.price[selectedCurrency].toLocaleString()}
+                                  </p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-lg rounded-xl overflow-hidden sticky bottom-4 z-10 backdrop-blur-sm bg-card/80">
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-                <DynamicIcon name="DollarSign" className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Estimated Total ({selectedCurrency.toUpperCase()})</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-5xl font-bold text-primary mb-2">
-              {currencySymbol}{totalPrice.toLocaleString()}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              This is an estimate. We'll confirm all details with you.
-            </p>
-          </CardContent>
-          <CardFooter className="flex justify-end p-6 bg-muted/30">
-            <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              Submit Custom Website Request
-            </Button>
-          </CardFooter>
-        </Card>
-      </form>
+          <Card className="shadow-lg rounded-xl overflow-hidden sticky bottom-4 z-10 backdrop-blur-sm bg-card/80">
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                  <DynamicIcon name="DollarSign" className="h-6 w-6 text-primary" />
+                  <CardTitle className="text-2xl">Estimated Total ({selectedCurrency.toUpperCase()})</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-5xl font-bold text-primary mb-2">
+                {currencySymbol}{totalPrice.toLocaleString()}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This is an estimate. We'll confirm all details with you.
+              </p>
+            </CardContent>
+            <CardFooter className="flex justify-end p-6 bg-muted/30">
+              <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                Submit Custom Website Request
+              </Button>
+            </CardFooter>
+          </Card>
+        </form>
+      </div>
     </div>
   );
 }
+
