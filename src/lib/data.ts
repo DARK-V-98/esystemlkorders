@@ -1,37 +1,46 @@
 
-import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig } from '@/types';
+import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SelectedFeatureInOrder } from '@/types';
 import { format } from 'date-fns';
 import { collection, getDocs, doc, getDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { db } from './firebase'; // Import Firestore instance
-
-// Note: The MOCK_ORDERS array is no longer used as data is fetched from Firestore.
+import { db } from './firebase';
 
 export async function fetchOrders(
   filters: OrderFilters = {},
   sortConfig: SortConfig = { key: 'createdDate', direction: 'descending' }
 ): Promise<Order[]> {
-  // Simulate API delay - can be removed if not needed
-  // await new Promise(resolve => setTimeout(resolve, 300));
-
   try {
     const ordersCollectionRef = collection(db, 'orders');
-    // For simplicity and to keep existing filter/sort logic, we fetch all orders
-    // and then filter/sort client-side. For larger datasets, consider
-    // implementing more complex Firestore queries or a dedicated search service.
+    // Consider adding server-side filtering/sorting later if performance becomes an issue
+    // For now, fetch all and process client-side as per existing logic.
     const querySnapshot = await getDocs(ordersCollectionRef);
     
     let fetchedOrders: Order[] = querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
+      // Ensure requestedFeatures is an array, default to empty if not present or malformed
+      const requestedFeatures = Array.isArray(data.requestedFeatures) ? data.requestedFeatures : [];
+      
       return {
         id: docSnapshot.id,
-        ...data,
-        // Convert Firestore Timestamps to ISO strings
-        createdDate: data.createdDate instanceof Timestamp ? data.createdDate.toDate().toISOString() : data.createdDate,
-        deadline: data.deadline instanceof Timestamp ? data.deadline.toDate().toISOString() : data.deadline,
+        clientName: data.clientName || 'N/A',
+        projectName: data.projectName || 'N/A',
+        projectType: data.projectType || 'Custom Build',
+        status: data.status || 'Pending',
+        description: data.description || '',
+        requestedFeatures: requestedFeatures as SelectedFeatureInOrder[],
+        createdDate: data.createdDate instanceof Timestamp ? data.createdDate.toDate().toISOString() : (data.createdDate || new Date().toISOString()),
+        deadline: data.deadline instanceof Timestamp ? data.deadline.toDate().toISOString() : data.deadline, // Keep optional
+        contactEmail: data.contactEmail || 'N/A',
+        budget: data.budget || 0,
+        numberOfPages: data.numberOfPages || 0,
+        selectedCurrency: data.selectedCurrency || 'usd',
+        currencySymbol: data.currencySymbol || '$',
+        userEmail: data.userEmail || 'N/A',
+        domain: data.domain,
+        hostingDetails: data.hostingDetails,
       } as Order;
     });
 
-    // Apply client-side filtering (matches previous mock data behavior)
+    // Apply client-side filtering
     if (filters.status) {
       fetchedOrders = fetchedOrders.filter(order => order.status === filters.status);
     }
@@ -47,7 +56,7 @@ export async function fetchOrders(
       );
     }
 
-    // Apply client-side sorting (matches previous mock data behavior)
+    // Apply client-side sorting
     if (sortConfig.key) {
       fetchedOrders.sort((a, b) => {
         const valA = a[sortConfig.key!];
@@ -66,28 +75,41 @@ export async function fetchOrders(
 
   } catch (error) {
     console.error("Error fetching orders from Firestore:", error);
-    return []; // Return empty array on error
+    return [];
   }
 }
 
 export async function fetchOrderById(id: string): Promise<Order | undefined> {
-  // Simulate API delay - can be removed
-  // await new Promise(resolve => setTimeout(resolve, 200));
   try {
     const orderDocRef = doc(db, 'orders', id);
     const docSnap = await getDoc(orderDocRef);
 
     if (docSnap.exists()) {
       const data = docSnap.data();
+      // Ensure requestedFeatures is an array, default to empty if not present or malformed
+      const requestedFeatures = Array.isArray(data.requestedFeatures) ? data.requestedFeatures : [];
+
       return {
         id: docSnap.id,
-        ...data,
-        // Convert Firestore Timestamps to ISO strings
-        createdDate: data.createdDate instanceof Timestamp ? data.createdDate.toDate().toISOString() : data.createdDate,
+        clientName: data.clientName || 'N/A',
+        projectName: data.projectName || 'N/A',
+        projectType: data.projectType || 'Custom Build',
+        status: data.status || 'Pending',
+        description: data.description || '',
+        requestedFeatures: requestedFeatures as SelectedFeatureInOrder[],
+        createdDate: data.createdDate instanceof Timestamp ? data.createdDate.toDate().toISOString() : (data.createdDate || new Date().toISOString()),
         deadline: data.deadline instanceof Timestamp ? data.deadline.toDate().toISOString() : data.deadline,
+        contactEmail: data.contactEmail || 'N/A',
+        budget: data.budget || 0,
+        numberOfPages: data.numberOfPages || 0,
+        selectedCurrency: data.selectedCurrency || 'usd',
+        currencySymbol: data.currencySymbol || '$',
+        userEmail: data.userEmail || 'N/A',
+        domain: data.domain,
+        hostingDetails: data.hostingDetails,
       } as Order;
     } else {
-      console.log("No such document!");
+      console.log("No such order document!");
       return undefined;
     }
   } catch (error) {
@@ -96,16 +118,18 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
   }
 }
 
-export const PROJECT_TYPES: ProjectType[] = ['New Website', 'Redesign', 'Feature Enhancement', 'Maintenance'];
+export const PROJECT_TYPES: ProjectType[] = ['New Website', 'Redesign', 'Feature Enhancement', 'Maintenance', 'Custom Build'];
 export const ORDER_STATUSES: OrderStatus[] = ['Pending', 'In Progress', 'Review', 'Completed', 'Cancelled'];
 
-export function formatDate(dateString: string, dateFormat: string = 'PPP'): string {
+export function formatDate(dateString: string | undefined | null, dateFormat: string = 'PPP'): string {
   if (!dateString) return 'N/A';
   try {
-    // Ensure the date string is valid before formatting
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      return 'Invalid Date';
+      // Try to parse if it's already a number (timestamp)
+      const numDate = new Date(Number(dateString));
+      if(isNaN(numDate.getTime())) return 'Invalid Date';
+      return format(numDate, dateFormat);
     }
     return format(date, dateFormat);
   } catch (error) {

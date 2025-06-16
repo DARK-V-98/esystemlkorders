@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, ListChecks } from "lucide-react";
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc } from 'firebase/firestore';
-import { FEATURE_CATEGORIES as DEFAULT_FEATURE_CATEGORIES, PRICE_PER_PAGE as DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
+import { DEFAULT_FEATURE_CATEGORIES, DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
 import { DynamicIcon } from '@/components/icons';
 
 const FEATURES_COLLECTION = 'siteFeaturesConfig';
@@ -31,15 +31,19 @@ function LivePriceEditorContent() {
     try {
       // Fetch feature categories
       const categoriesSnapshot = await getDocs(collection(db, FEATURES_COLLECTION));
-      const fetchedCategories: FeatureCategory[] = categoriesSnapshot.docs.map(docSnap => ({
+      const fetchedCategoriesData: FeatureCategory[] = categoriesSnapshot.docs.map(docSnap => ({
         id: docSnap.id,
         ...(docSnap.data() as Omit<FeatureCategory, 'id'>),
-      })).sort((a, b) => { // Ensure consistent order if possible, or match DEFAULT_FEATURE_CATEGORIES order
-        const aIndex = DEFAULT_FEATURE_CATEGORIES.findIndex(cat => cat.id === a.id);
-        const bIndex = DEFAULT_FEATURE_CATEGORIES.findIndex(cat => cat.id === b.id);
-        return aIndex - bIndex;
-      });
-      setLiveCategories(fetchedCategories);
+      }));
+
+      // Sort fetched categories to match the order of DEFAULT_FEATURE_CATEGORIES for consistency
+      // This helps if some categories are added/removed manually from Firestore later
+      const sortedFetchedCategories = DEFAULT_FEATURE_CATEGORIES.map(defaultCat => {
+        const foundCat = fetchedCategoriesData.find(fetchedCat => fetchedCat.id === defaultCat.id);
+        return foundCat || defaultCat; // Fallback to default if not found in Firestore
+      }).filter(cat => cat); // Ensure no undefined entries if a defaultCat ID somehow isn't in fetched.
+      
+      setLiveCategories(sortedFetchedCategories);
 
       // Fetch page price
       const pagePriceSnap = await getDoc(doc(db, GLOBAL_PRICING_COLLECTION, PAGE_PRICE_DOC_ID));
@@ -99,9 +103,6 @@ function LivePriceEditorContent() {
     setSavingStates(prev => ({ ...prev, [categoryId]: true }));
     try {
       const categoryDocRef = doc(db, FEATURES_COLLECTION, categoryId);
-      // We only want to update fields that might change, esp. the features array with new prices.
-      // If other category metadata (name, description, iconName) is also editable, include it here.
-      // For now, assuming only feature prices change via this editor.
       await updateDoc(categoryDocRef, { 
         features: categoryToSave.features.map(f => ({
             id: f.id,
@@ -261,7 +262,7 @@ export default function AdminConsolePage() {
             id: feature.id,
             name: feature.name,
             description: feature.description,
-            price: feature.price, // { usd: number, lkr: number }
+            price: feature.price, 
             iconName: feature.iconName || null,
           })),
         };

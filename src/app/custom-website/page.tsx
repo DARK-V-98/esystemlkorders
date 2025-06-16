@@ -11,33 +11,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { DynamicIcon } from '@/components/icons';
 import { useToast } from "@/hooks/use-toast";
-import { useCurrency } from '@/contexts/currency-context'; // Import useCurrency
+import { useCurrency } from '@/contexts/currency-context';
+import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import type { FeatureCategory, FeatureOption, Price, CustomerDetailsForm as CustomerFormDetails, SelectedFeatureInOrder, Order } from '@/types'; // Adjusted import
+import { Loader2 } from 'lucide-react';
 
-// Updated Price structure
-export interface Price {
-  usd: number;
-  lkr: number;
-}
+// Default data (could be fetched from Firestore in a real app for admin management)
+export const DEFAULT_PRICE_PER_PAGE: Price = { usd: 50, lkr: 15000 };
 
-export interface FeatureOption {
-  id: string;
-  name: string;
-  description: string;
-  price: Price; 
-  iconName?: string;
-}
-
-export interface FeatureCategory {
-  id: string;
-  name: string;
-  description: string;
-  iconName: string;
-  features: FeatureOption[];
-}
-
-export const PRICE_PER_PAGE: Price = { usd: 50, lkr: 15000 };
-
-export const FEATURE_CATEGORIES: FeatureCategory[] = [
+export const DEFAULT_FEATURE_CATEGORIES: FeatureCategory[] = [
   {
     id: "frontend-development",
     name: "Frontend Development",
@@ -86,42 +70,42 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
   },
 ];
 
-interface CustomerDetails {
-  name: string;
-  email: string;
-  projectName: string;
-  projectDescription: string;
-  numberOfPages: string;
-}
 
 export default function MakeCustomWebsitePage() {
+  const [featureCategories, setFeatureCategories] = useState<FeatureCategory[]>(DEFAULT_FEATURE_CATEGORIES);
+  const [pricePerPage, setPricePerPage] = useState<Price>(DEFAULT_PRICE_PER_PAGE);
+  // In a real app, you'd fetch featureCategories and pricePerPage from Firestore here
+  // For now, we use the defaults.
+
   const [selectedFeatures, setSelectedFeatures] = useState<Record<string, boolean>>({});
   const [totalPrice, setTotalPrice] = useState<number>(0);
-  const [customerDetails, setCustomerDetails] = useState<CustomerDetails>({
+  const [customerDetails, setCustomerDetails] = useState<CustomerFormDetails>({
     name: '',
     email: '',
     projectName: '',
     projectDescription: '',
     numberOfPages: '1',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { selectedCurrency, currencySymbol } = useCurrency(); // Use currency context
+  const { selectedCurrency, currencySymbol } = useCurrency();
+  const { user } = useAuth();
 
   useEffect(() => {
     let currentTotal = 0;
-    FEATURE_CATEGORIES.forEach(category => {
+    featureCategories.forEach(category => {
       category.features.forEach(feature => {
         if (selectedFeatures[feature.id]) {
-          currentTotal += feature.price[selectedCurrency]; // Use selected currency
+          currentTotal += feature.price[selectedCurrency];
         }
       });
     });
     const numPages = parseInt(customerDetails.numberOfPages, 10);
     if (!isNaN(numPages) && numPages > 0) {
-      currentTotal += numPages * PRICE_PER_PAGE[selectedCurrency]; // Use selected currency
+      currentTotal += numPages * pricePerPage[selectedCurrency];
     }
     setTotalPrice(currentTotal);
-  }, [selectedFeatures, customerDetails.numberOfPages, selectedCurrency]);
+  }, [selectedFeatures, customerDetails.numberOfPages, selectedCurrency, featureCategories, pricePerPage]);
 
   const handleFeatureToggle = (featureId: string) => {
     setSelectedFeatures(prev => ({
@@ -140,8 +124,28 @@ export default function MakeCustomWebsitePage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const selectedFeatureDetails = FEATURE_CATEGORIES.flatMap(category => 
-      category.features.filter(feature => selectedFeatures[feature.id])
+    setIsSubmitting(true);
+
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to submit a custom website request.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    const selectedFeatureDetails: SelectedFeatureInOrder[] = featureCategories.flatMap(category =>
+      category.features
+        .filter(feature => selectedFeatures[feature.id])
+        .map(feature => ({
+          id: feature.id,
+          name: feature.name,
+          price: feature.price[selectedCurrency],
+          currency: selectedCurrency,
+          currencySymbol: currencySymbol,
+        }))
     );
 
     const numPages = parseInt(customerDetails.numberOfPages, 10);
@@ -150,40 +154,64 @@ export default function MakeCustomWebsitePage() {
       toast({
         variant: "destructive",
         title: "No Features or Pages Selected",
-        description: "Please select at least one feature or specify the number of pages for your custom website.",
+        description: "Please select at least one feature or specify a valid number of pages.",
       });
+      setIsSubmitting(false);
       return;
     }
-     if (!customerDetails.name || !customerDetails.email || !customerDetails.projectName) {
+    if (!customerDetails.name || !customerDetails.email || !customerDetails.projectName) {
       toast({
         variant: "destructive",
         title: "Missing Information",
         description: "Please fill in your name, email, and project name.",
       });
+      setIsSubmitting(false);
       return;
     }
-    if (isNaN(numPages) || numPages < 0) {
+    if (isNaN(numPages) || numPages < 0) { // Allow 0 pages if only features are selected
       toast({
         variant: "destructive",
         title: "Invalid Number of Pages",
         description: "Please enter a valid number for pages (0 or more).",
       });
+      setIsSubmitting(false);
       return;
     }
 
-    console.log("Custom Website Request Submitted:");
-    console.log("Customer Details:", { ...customerDetails, numberOfPages: numPages });
-    console.log("Selected Features:", selectedFeatureDetails.map(f => ({id: f.id, name: f.name, price: f.price[selectedCurrency] })));
-    console.log(`Total Estimated Price (${selectedCurrency.toUpperCase()}): `, totalPrice);
+    const orderData: Omit<Order, 'id' | 'createdDate' | 'deadline'> & { createdDate: any } = {
+      clientName: customerDetails.name,
+      projectName: customerDetails.projectName,
+      projectType: 'Custom Build',
+      status: 'Pending',
+      description: customerDetails.projectDescription,
+      requestedFeatures: selectedFeatureDetails,
+      contactEmail: customerDetails.email,
+      budget: totalPrice,
+      numberOfPages: numPages,
+      selectedCurrency: selectedCurrency,
+      currencySymbol: currencySymbol,
+      userEmail: user.email || 'N/A', // Should have email if logged in
+      createdDate: serverTimestamp(),
+    };
 
-
-    toast({
-      title: "Request Submitted!",
-      description: `Your custom website request for "${customerDetails.projectName}" has been submitted. Total (${selectedCurrency.toUpperCase()}): ${currencySymbol}${totalPrice.toLocaleString()}. We'll be in touch!`,
-    });
-
-    setSelectedFeatures({});
-    setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '', numberOfPages: '1' });
+    try {
+      const docRef = await addDoc(collection(db, "orders"), orderData);
+      toast({
+        title: "Request Submitted!",
+        description: `Your custom website request for "${customerDetails.projectName}" (Order ID: ${docRef.id}) has been submitted. Total (${selectedCurrency.toUpperCase()}): ${currencySymbol}${totalPrice.toLocaleString()}. We'll be in touch!`,
+      });
+      setSelectedFeatures({});
+      setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '', numberOfPages: '1' });
+    } catch (error) {
+      console.error("Error submitting custom website request:", error);
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description: "There was an error submitting your request. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -212,58 +240,62 @@ export default function MakeCustomWebsitePage() {
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor="projectName" className="font-semibold">Project Name</Label>
-              <Input 
-                id="projectName" 
-                name="projectName" 
+              <Input
+                id="projectName"
+                name="projectName"
                 value={customerDetails.projectName}
                 onChange={handleInputChange}
-                placeholder="e.g., My Awesome Startup Site" 
-                required 
+                placeholder="e.g., My Awesome Startup Site"
+                required
                 className="mt-1"
+                disabled={isSubmitting}
               />
             </div>
              <div>
               <Label htmlFor="name" className="font-semibold">Your Name</Label>
-              <Input 
-                id="name" 
-                name="name" 
+              <Input
+                id="name"
+                name="name"
                 value={customerDetails.name}
                 onChange={handleInputChange}
-                placeholder="John Doe" 
-                required 
+                placeholder="John Doe"
+                required
                 className="mt-1"
+                disabled={isSubmitting}
               />
             </div>
             <div>
               <Label htmlFor="email" className="font-semibold">Your Email</Label>
-              <Input 
-                id="email" 
-                name="email" 
+              <Input
+                id="email"
+                name="email"
                 type="email"
                 value={customerDetails.email}
                 onChange={handleInputChange}
-                placeholder="you@example.com" 
-                required 
+                placeholder="you@example.com"
+                required
                 className="mt-1"
+                disabled={isSubmitting}
               />
             </div>
             <div>
               <Label htmlFor="numberOfPages" className="font-semibold">Number of Pages</Label>
               <div className="flex items-center mt-1">
                 <DynamicIcon name="FileStack" className="h-5 w-5 text-muted-foreground mr-2" />
-                <Input 
-                  id="numberOfPages" 
-                  name="numberOfPages" 
+                <Input
+                  id="numberOfPages"
+                  name="numberOfPages"
                   type="number"
                   min="0"
                   value={customerDetails.numberOfPages}
                   onChange={handleInputChange}
-                  placeholder="e.g., 5" 
-                  required 
+                  placeholder="e.g., 5"
+                  required
+                  disabled={isSubmitting}
                 />
               </div>
                <p className="text-xs text-muted-foreground mt-1">
-                 Each page costs an additional {currencySymbol}{PRICE_PER_PAGE[selectedCurrency].toLocaleString()}.
+                 Each page costs an additional {currencySymbol}{pricePerPage[selectedCurrency].toLocaleString()}.
                </p>
             </div>
             <div className="md:col-span-2">
@@ -276,6 +308,7 @@ export default function MakeCustomWebsitePage() {
                 placeholder="Briefly describe your website, its goals, and any specific requirements."
                 rows={4}
                 className="mt-1"
+                disabled={isSubmitting}
               />
             </div>
           </CardContent>
@@ -290,10 +323,10 @@ export default function MakeCustomWebsitePage() {
             <CardDescription>Choose the components and services for your website.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <Accordion type="multiple" defaultValue={FEATURE_CATEGORIES.map(cat => cat.id)} className="w-full">
-              {FEATURE_CATEGORIES.map((category) => (
+            <Accordion type="multiple" defaultValue={featureCategories.map(cat => cat.id)} className="w-full">
+              {featureCategories.map((category) => (
                 <AccordionItem value={category.id} key={category.id} className="border-b last:border-b-0">
-                  <AccordionTrigger className="px-6 py-4 hover:bg-muted/50 transition-colors">
+                  <AccordionTrigger className="px-6 py-4 hover:bg-muted/50 transition-colors" disabled={isSubmitting}>
                     <div className="flex items-center space-x-3">
                       <DynamicIcon name={category.iconName} className="h-5 w-5 text-primary" />
                       <span className="text-lg font-medium">{category.name}</span>
@@ -312,6 +345,7 @@ export default function MakeCustomWebsitePage() {
                                 onCheckedChange={() => handleFeatureToggle(feature.id)}
                                 className="mt-1 shrink-0"
                                 aria-label={`Select ${feature.name}`}
+                                disabled={isSubmitting}
                               />
                               <div className="flex-grow">
                                 <Label htmlFor={feature.id} className="font-semibold text-base flex items-center cursor-pointer">
@@ -353,7 +387,8 @@ export default function MakeCustomWebsitePage() {
             </p>
           </CardContent>
           <CardFooter className="flex justify-end p-6 bg-muted/30">
-            <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6">
+            <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
               Submit Custom Website Request
             </Button>
           </CardFooter>
