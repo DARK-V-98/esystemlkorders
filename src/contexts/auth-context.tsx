@@ -8,6 +8,7 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut,
+  createUserWithEmailAndPassword, // Import for sign-up
   signInWithEmailAndPassword,
   type User as FirebaseUser,
   type AuthProvider as FirebaseAuthProvider
@@ -21,6 +22,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string) => Promise<void>; // New sign-up method
   signOutUser: () => Promise<void>;
 }
 
@@ -34,14 +36,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        // Here you could fetch custom claims or role from Firestore if needed
-        // For now, just map basic user info
         const appUser: AuthUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
-          // role: (await firebaseUser.getIdTokenResult())?.claims.role || 'user', // Example for custom claims
         };
         setUser(appUser);
       } else {
@@ -58,12 +57,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider as FirebaseAuthProvider);
-      // onAuthStateChanged will handle setting the user and redirecting
     } catch (error) {
       console.error("Error signing in with Google:", error);
-      // Handle error (e.g., show a toast message)
-    } finally {
-      // setLoading(false) // onAuthStateChanged handles loading state update
+      throw error; 
     }
   };
 
@@ -71,12 +67,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting the user and redirecting
     } catch (error) {
       console.error("Error signing in with email:", error);
+      throw error;
+    }
+  };
+
+  const signUpWithEmail = async (email: string, pass: string) => { // New function
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will handle setting the user and redirecting
+    } catch (error) {
+      console.error("Error signing up with email:", error);
       throw error; // Re-throw to be caught by the form
-    } finally {
-      // setLoading(false)
     }
   };
 
@@ -85,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await signOut(auth);
       setUser(null);
-      router.push('/login'); // Redirect to login after sign out
+      router.push('/login'); 
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
@@ -94,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signOutUser }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOutUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -27,28 +27,34 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signInWithGoogle, signInWithEmail, user, loading } = useAuth();
+  const [isSignUp, setIsSignUp] = useState(false); // State to toggle between Sign In and Sign Up
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/'); // Redirect to home if already logged in
+      router.push('/'); 
     }
   }, [user, loading, router]);
 
-  const handleEmailSignIn = async (e: FormEvent) => {
+  const handleEmailAuth = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await signInWithEmail(email, password);
-      toast({ title: "Signed In", description: "Successfully signed in with email." });
+      if (isSignUp) {
+        await signUpWithEmail(email, password);
+        toast({ title: "Signed Up", description: "Successfully created your account. Welcome!" });
+      } else {
+        await signInWithEmail(email, password);
+        toast({ title: "Signed In", description: "Successfully signed in." });
+      }
       router.push('/'); 
     } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
-        title: "Sign In Failed",
+        title: isSignUp ? "Sign Up Failed" : "Sign In Failed",
         description: error.message || "An unknown error occurred.",
       });
     } finally {
@@ -62,8 +68,7 @@ export default function LoginPage() {
       await signInWithGoogle();
       toast({ title: "Signed In", description: "Successfully signed in with Google." });
       router.push('/');
-    } catch (error: any)
-{
+    } catch (error: any) {
       console.error(error);
        toast({
         variant: "destructive",
@@ -84,7 +89,6 @@ export default function LoginPage() {
     );
   }
 
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
       <Card className="w-full max-w-md shadow-2xl rounded-xl overflow-hidden">
@@ -104,14 +108,14 @@ export default function LoginPage() {
             </svg>
           </div>
           <CardTitle className="text-3xl font-bold text-center text-primary">
-            eSystemLK Gateway
+            {isSignUp ? "Create Account" : "eSystemLK Gateway"}
           </CardTitle>
           <CardDescription className="text-center text-foreground/80 pt-1">
-            Sign in to access your dashboard.
+            {isSignUp ? "Enter your details to register." : "Sign in to access your dashboard."}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          <form onSubmit={handleEmailSignIn} className="space-y-4">
+          <form onSubmit={handleEmailAuth} className="space-y-4">
             <div>
               <Label htmlFor="email" className="text-foreground/90">Email</Label>
               <Input
@@ -138,9 +142,16 @@ export default function LoginPage() {
                 disabled={isSubmitting}
               />
             </div>
+            {/* Add confirm password if desired for sign up */}
+            {/* {isSignUp && (
+              <div>
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input id="confirm-password" type="password" placeholder="••••••••" required />
+              </div>
+            )} */}
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Sign In
+              {isSignUp ? "Sign Up" : "Sign In"}
             </Button>
           </form>
           
@@ -155,14 +166,17 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full border-input hover:bg-muted/50" onClick={handleGoogleSignIn} disabled={isSubmitting}>
-             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :  <GoogleIcon /> }
+          <Button variant="outline" className="w-full border-input hover:bg-muted/50" onClick={handleGoogleSignIn} disabled={isSubmitting || isSignUp}>
+             {isSubmitting && !isSignUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :  <GoogleIcon /> }
             <span className="ml-2">Sign in with Google</span>
           </Button>
         </CardContent>
-        <CardFooter className="p-6 bg-muted/30">
-           <p className="text-xs text-muted-foreground text-center w-full">
-            Contact support if you have trouble signing in.
+        <CardFooter className="p-6 bg-muted/30 flex flex-col items-center space-y-3">
+           <Button variant="link" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-accent hover:text-accent/80 p-0 h-auto" disabled={isSubmitting}>
+            {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+          </Button>
+           <p className="text-xs text-muted-foreground text-center w-full pt-2">
+            Contact support if you have trouble.
           </p>
         </CardFooter>
       </Card>
