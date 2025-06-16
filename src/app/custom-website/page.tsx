@@ -9,51 +9,57 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Palette, Server, Settings, Smartphone, DollarSign, Briefcase, User, Mail, FileText, BarChart3, CreditCard, Users, ShieldCheck, MapPin, DatabaseZap, FileStack } from 'lucide-react';
+import { DynamicIcon } from '@/components/icons'; // Import DynamicIcon
 import { useToast } from "@/hooks/use-toast";
 
-interface FeatureOption {
+// These types and constants might be moved to a shared location later
+// if they are also fetched from Firestore for the admin panel.
+export interface FeatureOption {
   id: string;
   name: string;
   description: string;
   price: number;
-  icon?: React.ElementType;
+  iconName?: string; // Changed from icon: React.ElementType
 }
 
-interface FeatureCategory {
+export interface FeatureCategory {
+  id: string; // Added id for Firestore document key
   name: string;
   description: string;
-  icon: React.ElementType;
+  iconName: string; // Changed from icon: React.ElementType
   features: FeatureOption[];
 }
 
-const PRICE_PER_PAGE = 50; // Example price per page
+export const PRICE_PER_PAGE = 50; // Example price per page
 
-const FEATURE_CATEGORIES: FeatureCategory[] = [
+export const FEATURE_CATEGORIES: FeatureCategory[] = [
   {
+    id: "frontend-development",
     name: "Frontend Development",
     description: "Crafting the visual and interactive aspects of your website.",
-    icon: Palette,
+    iconName: "Palette",
     features: [
-      { id: "ui-ux-design", name: "UI/UX Design", description: "Professional user interface and experience design.", price: 500, icon: BarChart3 },
-      { id: "responsive-design", name: "Mobile Responsive Design", description: "Ensuring your site looks great on all devices.", price: 300, icon: Smartphone },
+      { id: "ui-ux-design", name: "UI/UX Design", description: "Professional user interface and experience design.", price: 500, iconName: "BarChart3" },
+      { id: "responsive-design", name: "Mobile Responsive Design", description: "Ensuring your site looks great on all devices.", price: 300, iconName: "Smartphone" },
       { id: "custom-animations", name: "Custom Animations", description: "Engaging animations to enhance user experience.", price: 250 },
     ],
   },
   {
+    id: "backend-development",
     name: "Backend Development",
     description: "Building the server-side logic and database interactions.",
-    icon: Server,
+    iconName: "Server",
     features: [
-      { id: "user-accounts", name: "User Accounts & Roles", description: "User registration, login, and role management.", price: 600, icon: Users },
+      { id: "user-accounts", name: "User Accounts & Roles", description: "User registration, login, and role management.", price: 600, iconName: "Users" },
       { id: "api-development", name: "Custom API Development", description: "Building custom APIs for your application.", price: 700 },
-      { id: "database-integration", name: "Database Integration", description: "Connecting and managing your database.", price: 400, icon: DatabaseZap },
+      { id: "database-integration", name: "Database Integration", description: "Connecting and managing your database.", price: 400, iconName: "DatabaseZap" },
     ],
   },
   {
+    id: "ecommerce-payments",
     name: "E-commerce & Payments",
     description: "Features for online stores and payment processing.",
-    icon: CreditCard,
+    iconName: "CreditCard",
     features: [
       { id: "payment-integration", name: "Payment Gateway Integration", description: "Stripe, PayPal, or other payment integrations.", price: 450 },
       { id: "shopping-cart", name: "Shopping Cart Functionality", description: "Full shopping cart and checkout system.", price: 550 },
@@ -61,15 +67,16 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
     ],
   },
   {
+    id: "additional-services", // Changed ID for clarity
     name: "Additional Features & Services",
     description: "Other services to enhance your website.",
-    icon: Settings,
+    iconName: "Settings",
     features: [
       { id: "seo-optimization", name: "Basic SEO Optimization", description: "Optimizing your site for search engines.", price: 200 },
       { id: "analytics-integration", name: "Analytics Integration", description: "Integrating Google Analytics or similar.", price: 150 },
       { id: "content-management", name: "Content Management System (CMS)", description: "Basic CMS for easy content updates.", price: 800 },
-      { id: "api-weather-map", name: "Weather/Map API Integration", description: "Using external APIs like weather or maps.", price: 250, icon: MapPin },
-      { id: "database-migration", name: "Database Migration Support", description: "Assistance with migrating existing databases.", price: 500, icon: DatabaseZap },
+      { id: "api-weather-map", name: "Weather/Map API Integration", description: "Using external APIs like weather or maps.", price: 250, iconName: "MapPin" },
+      { id: "database-migration", name: "Database Migration Support", description: "Assistance with migrating existing databases.", price: 500, iconName: "DatabaseZap" },
     ],
   },
 ];
@@ -79,7 +86,7 @@ interface CustomerDetails {
   email: string;
   projectName: string;
   projectDescription: string;
-  numberOfPages: string; // Changed to string to match input value, parse to number when calculating
+  numberOfPages: string;
 }
 
 export default function MakeCustomWebsitePage() {
@@ -90,9 +97,12 @@ export default function MakeCustomWebsitePage() {
     email: '',
     projectName: '',
     projectDescription: '',
-    numberOfPages: '1', // Default to 1 page
+    numberOfPages: '1',
   });
   const { toast } = useToast();
+
+  // In a future step, FEATURE_CATEGORIES and PRICE_PER_PAGE would be fetched from Firestore here.
+  // For now, we use the hardcoded constants.
 
   useEffect(() => {
     let currentTotal = 0;
@@ -149,7 +159,7 @@ export default function MakeCustomWebsitePage() {
       });
       return;
     }
-    if (isNaN(numPages) || numPages < 0) {
+    if (isNaN(numPages) || numPages < 0) { // Allow 0 pages
       toast({
         variant: "destructive",
         title: "Invalid Number of Pages",
@@ -158,21 +168,19 @@ export default function MakeCustomWebsitePage() {
       return;
     }
 
-
     console.log("Custom Website Request Submitted:");
     console.log("Customer Details:", { ...customerDetails, numberOfPages: numPages });
-    console.log("Selected Features:", selectedFeatureDetails);
+    console.log("Selected Features:", selectedFeatureDetails.map(f => ({id: f.id, name: f.name, price: f.price }))); // Log less data
     console.log("Total Estimated Price: $", totalPrice);
 
     // TODO: Implement actual submission to backend (e.g., Firestore)
-    // Example: await createCustomOrder({ ...customerDetails, numberOfPages: numPages, features: selectedFeatureDetails, totalPrice });
+    // Example: await createCustomOrder({ ...customerDetails, numberOfPages: numPages, features: selectedFeatureDetails.map(f=>f.id), totalPrice });
 
     toast({
       title: "Request Submitted!",
       description: `Your custom website request for "${customerDetails.projectName}" has been submitted. Total: $${totalPrice}. We'll be in touch!`,
     });
 
-    // Reset form
     setSelectedFeatures({});
     setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '', numberOfPages: '1' });
   };
@@ -181,7 +189,7 @@ export default function MakeCustomWebsitePage() {
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
       <header className="mb-8 text-center md:text-left">
         <div className="flex items-center justify-center md:justify-start space-x-3 mb-2">
-          <Palette className="h-10 w-10 text-primary" />
+          <DynamicIcon name="Palette" className="h-10 w-10 text-primary" />
           <h1 className="text-4xl font-bold font-headline text-primary">
             Build Your Custom Website
           </h1>
@@ -195,7 +203,7 @@ export default function MakeCustomWebsitePage() {
         <Card className="shadow-lg rounded-xl overflow-hidden">
           <CardHeader className="bg-primary/5">
             <div className="flex items-center space-x-3">
-              <Briefcase className="h-6 w-6 text-primary" />
+              <DynamicIcon name="Briefcase" className="h-6 w-6 text-primary" />
               <CardTitle className="text-2xl">Your Project Details</CardTitle>
             </div>
             <CardDescription>Tell us about your project and how to reach you.</CardDescription>
@@ -241,12 +249,12 @@ export default function MakeCustomWebsitePage() {
             <div>
               <Label htmlFor="numberOfPages" className="font-semibold">Number of Pages</Label>
               <div className="flex items-center mt-1">
-                <FileStack className="h-5 w-5 text-muted-foreground mr-2" />
+                <DynamicIcon name="FileStack" className="h-5 w-5 text-muted-foreground mr-2" />
                 <Input 
                   id="numberOfPages" 
                   name="numberOfPages" 
                   type="number"
-                  min="0"
+                  min="0" // Allow 0 pages
                   value={customerDetails.numberOfPages}
                   onChange={handleInputChange}
                   placeholder="e.g., 5" 
@@ -273,18 +281,18 @@ export default function MakeCustomWebsitePage() {
         <Card className="shadow-lg rounded-xl overflow-hidden">
           <CardHeader className="bg-primary/5">
              <div className="flex items-center space-x-3">
-                <Settings className="h-6 w-6 text-primary" />
+                <DynamicIcon name="Settings" className="h-6 w-6 text-primary" />
                 <CardTitle className="text-2xl">Select Features</CardTitle>
             </div>
             <CardDescription>Choose the components and services for your website.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <Accordion type="multiple" defaultValue={FEATURE_CATEGORIES.map(cat => cat.name)} className="w-full">
+            <Accordion type="multiple" defaultValue={FEATURE_CATEGORIES.map(cat => cat.id)} className="w-full">
               {FEATURE_CATEGORIES.map((category) => (
-                <AccordionItem value={category.name} key={category.name} className="border-b last:border-b-0">
+                <AccordionItem value={category.id} key={category.id} className="border-b last:border-b-0">
                   <AccordionTrigger className="px-6 py-4 hover:bg-muted/50 transition-colors">
                     <div className="flex items-center space-x-3">
-                      <category.icon className="h-5 w-5 text-primary" />
+                      <DynamicIcon name={category.iconName} className="h-5 w-5 text-primary" />
                       <span className="text-lg font-medium">{category.name}</span>
                     </div>
                   </AccordionTrigger>
@@ -300,10 +308,11 @@ export default function MakeCustomWebsitePage() {
                                 checked={!!selectedFeatures[feature.id]}
                                 onCheckedChange={() => handleFeatureToggle(feature.id)}
                                 className="mt-1 shrink-0"
+                                aria-label={`Select ${feature.name}`}
                               />
                               <div className="flex-grow">
                                 <Label htmlFor={feature.id} className="font-semibold text-base flex items-center cursor-pointer">
-                                  {feature.icon && <feature.icon className="h-4 w-4 mr-2 text-muted-foreground" />}
+                                  {feature.iconName && <DynamicIcon name={feature.iconName} className="h-4 w-4 mr-2 text-muted-foreground" />}
                                   {feature.name}
                                 </Label>
                                 <p className="text-xs text-muted-foreground mt-1">{feature.description}</p>
@@ -326,7 +335,7 @@ export default function MakeCustomWebsitePage() {
         <Card className="shadow-lg rounded-xl overflow-hidden sticky bottom-4 z-10 backdrop-blur-sm bg-card/80">
           <CardHeader>
             <div className="flex items-center space-x-3">
-                <DollarSign className="h-6 w-6 text-primary" />
+                <DynamicIcon name="DollarSign" className="h-6 w-6 text-primary" />
                 <CardTitle className="text-2xl">Estimated Total</CardTitle>
             </div>
           </CardHeader>
@@ -348,5 +357,3 @@ export default function MakeCustomWebsitePage() {
     </div>
   );
 }
-
-
