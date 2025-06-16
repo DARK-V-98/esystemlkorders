@@ -4,13 +4,14 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAuth } from 'firebase/auth'; // Import getAuth
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyA4N7py6wI38KUyKD1RzzuZenIA1VAwV9M",
+  authDomain: "esystemlk-web.firebaseapp.com",
+  projectId: "esystemlk-web",
+  storageBucket: "esystemlk-web.appspot.com", // Corrected storageBucket from your previous request, as .firebasestorage.app is not valid. It should be .appspot.com
+  messagingSenderId: "87807547925",
+  appId: "1:87807547925:web:299ba3a46823791ade0c1c"
 };
 
 // Initialize Firebase
