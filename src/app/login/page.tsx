@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/'); 
+      router.push('/menu'); 
     }
   }, [user, loading, router]);
 
@@ -49,7 +49,7 @@ export default function LoginPage() {
         await signInWithEmail(email, password);
         toast({ title: "Signed In", description: "Successfully signed in." });
       }
-      router.push('/'); 
+      router.push('/menu'); 
     } catch (error: any) {
       console.error(error);
       toast({
@@ -67,7 +67,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
       toast({ title: "Signed In", description: "Successfully signed in with Google." });
-      router.push('/');
+      router.push('/menu');
     } catch (error: any) {
       console.error(error);
        toast({
