@@ -9,29 +9,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { DynamicIcon } from '@/components/icons'; // Import DynamicIcon
+import { DynamicIcon } from '@/components/icons';
 import { useToast } from "@/hooks/use-toast";
 
-// These types and constants might be moved to a shared location later
-// if they are also fetched from Firestore for the admin panel.
+// Updated Price structure
+export interface Price {
+  usd: number;
+  lkr: number;
+}
+
 export interface FeatureOption {
   id: string;
   name: string;
   description: string;
-  price: number;
-  iconName?: string; // Changed from icon: React.ElementType
+  price: Price; // Updated
+  iconName?: string;
 }
 
 export interface FeatureCategory {
-  id: string; // Added id for Firestore document key
+  id: string;
   name: string;
   description: string;
-  iconName: string; // Changed from icon: React.ElementType
+  iconName: string;
   features: FeatureOption[];
 }
 
-export const PRICE_PER_PAGE = 50; // Example price per page
+// Updated PRICE_PER_PAGE with USD and LKR
+export const PRICE_PER_PAGE: Price = { usd: 50, lkr: 15000 };
 
+// Updated FEATURE_CATEGORIES with USD and LKR prices
 export const FEATURE_CATEGORIES: FeatureCategory[] = [
   {
     id: "frontend-development",
@@ -39,9 +45,9 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     description: "Crafting the visual and interactive aspects of your website.",
     iconName: "Palette",
     features: [
-      { id: "ui-ux-design", name: "UI/UX Design", description: "Professional user interface and experience design.", price: 500, iconName: "BarChart3" },
-      { id: "responsive-design", name: "Mobile Responsive Design", description: "Ensuring your site looks great on all devices.", price: 300, iconName: "Smartphone" },
-      { id: "custom-animations", name: "Custom Animations", description: "Engaging animations to enhance user experience.", price: 250 },
+      { id: "ui-ux-design", name: "UI/UX Design", description: "Professional user interface and experience design.", price: { usd: 500, lkr: 150000 }, iconName: "BarChart3" },
+      { id: "responsive-design", name: "Mobile Responsive Design", description: "Ensuring your site looks great on all devices.", price: { usd: 300, lkr: 90000 }, iconName: "Smartphone" },
+      { id: "custom-animations", name: "Custom Animations", description: "Engaging animations to enhance user experience.", price: { usd: 250, lkr: 75000 } },
     ],
   },
   {
@@ -50,9 +56,9 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     description: "Building the server-side logic and database interactions.",
     iconName: "Server",
     features: [
-      { id: "user-accounts", name: "User Accounts & Roles", description: "User registration, login, and role management.", price: 600, iconName: "Users" },
-      { id: "api-development", name: "Custom API Development", description: "Building custom APIs for your application.", price: 700 },
-      { id: "database-integration", name: "Database Integration", description: "Connecting and managing your database.", price: 400, iconName: "DatabaseZap" },
+      { id: "user-accounts", name: "User Accounts & Roles", description: "User registration, login, and role management.", price: { usd: 600, lkr: 180000 }, iconName: "Users" },
+      { id: "api-development", name: "Custom API Development", description: "Building custom APIs for your application.", price: { usd: 700, lkr: 210000 } },
+      { id: "database-integration", name: "Database Integration", description: "Connecting and managing your database.", price: { usd: 400, lkr: 120000 }, iconName: "DatabaseZap" },
     ],
   },
   {
@@ -61,22 +67,22 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     description: "Features for online stores and payment processing.",
     iconName: "CreditCard",
     features: [
-      { id: "payment-integration", name: "Payment Gateway Integration", description: "Stripe, PayPal, or other payment integrations.", price: 450 },
-      { id: "shopping-cart", name: "Shopping Cart Functionality", description: "Full shopping cart and checkout system.", price: 550 },
-      { id: "product-management", name: "Product Management System", description: "Admin panel to manage products.", price: 400 },
+      { id: "payment-integration", name: "Payment Gateway Integration", description: "Stripe, PayPal, or other payment integrations.", price: { usd: 450, lkr: 135000 } },
+      { id: "shopping-cart", name: "Shopping Cart Functionality", description: "Full shopping cart and checkout system.", price: { usd: 550, lkr: 165000 } },
+      { id: "product-management", name: "Product Management System", description: "Admin panel to manage products.", price: { usd: 400, lkr: 120000 } },
     ],
   },
   {
-    id: "additional-services", // Changed ID for clarity
+    id: "additional-services",
     name: "Additional Features & Services",
     description: "Other services to enhance your website.",
     iconName: "Settings",
     features: [
-      { id: "seo-optimization", name: "Basic SEO Optimization", description: "Optimizing your site for search engines.", price: 200 },
-      { id: "analytics-integration", name: "Analytics Integration", description: "Integrating Google Analytics or similar.", price: 150 },
-      { id: "content-management", name: "Content Management System (CMS)", description: "Basic CMS for easy content updates.", price: 800 },
-      { id: "api-weather-map", name: "Weather/Map API Integration", description: "Using external APIs like weather or maps.", price: 250, iconName: "MapPin" },
-      { id: "database-migration", name: "Database Migration Support", description: "Assistance with migrating existing databases.", price: 500, iconName: "DatabaseZap" },
+      { id: "seo-optimization", name: "Basic SEO Optimization", description: "Optimizing your site for search engines.", price: { usd: 200, lkr: 60000 } },
+      { id: "analytics-integration", name: "Analytics Integration", description: "Integrating Google Analytics or similar.", price: { usd: 150, lkr: 45000 } },
+      { id: "content-management", name: "Content Management System (CMS)", description: "Basic CMS for easy content updates.", price: { usd: 800, lkr: 240000 } },
+      { id: "api-weather-map", name: "Weather/Map API Integration", description: "Using external APIs like weather or maps.", price: { usd: 250, lkr: 75000 }, iconName: "MapPin" },
+      { id: "database-migration", name: "Database Migration Support", description: "Assistance with migrating existing databases.", price: { usd: 500, lkr: 150000 }, iconName: "DatabaseZap" },
     ],
   },
 ];
@@ -88,6 +94,9 @@ interface CustomerDetails {
   projectDescription: string;
   numberOfPages: string;
 }
+
+// For now, selectedCurrency will be hardcoded to 'usd'. This will be dynamic later.
+const TEMP_SELECTED_CURRENCY: keyof Price = 'usd'; 
 
 export default function MakeCustomWebsitePage() {
   const [selectedFeatures, setSelectedFeatures] = useState<Record<string, boolean>>({});
@@ -101,21 +110,18 @@ export default function MakeCustomWebsitePage() {
   });
   const { toast } = useToast();
 
-  // In a future step, FEATURE_CATEGORIES and PRICE_PER_PAGE would be fetched from Firestore here.
-  // For now, we use the hardcoded constants.
-
   useEffect(() => {
     let currentTotal = 0;
     FEATURE_CATEGORIES.forEach(category => {
       category.features.forEach(feature => {
         if (selectedFeatures[feature.id]) {
-          currentTotal += feature.price;
+          currentTotal += feature.price[TEMP_SELECTED_CURRENCY]; // Use selected currency
         }
       });
     });
     const numPages = parseInt(customerDetails.numberOfPages, 10);
     if (!isNaN(numPages) && numPages > 0) {
-      currentTotal += numPages * PRICE_PER_PAGE;
+      currentTotal += numPages * PRICE_PER_PAGE[TEMP_SELECTED_CURRENCY]; // Use selected currency
     }
     setTotalPrice(currentTotal);
   }, [selectedFeatures, customerDetails.numberOfPages]);
@@ -159,7 +165,7 @@ export default function MakeCustomWebsitePage() {
       });
       return;
     }
-    if (isNaN(numPages) || numPages < 0) { // Allow 0 pages
+    if (isNaN(numPages) || numPages < 0) {
       toast({
         variant: "destructive",
         title: "Invalid Number of Pages",
@@ -170,20 +176,20 @@ export default function MakeCustomWebsitePage() {
 
     console.log("Custom Website Request Submitted:");
     console.log("Customer Details:", { ...customerDetails, numberOfPages: numPages });
-    console.log("Selected Features:", selectedFeatureDetails.map(f => ({id: f.id, name: f.name, price: f.price }))); // Log less data
-    console.log("Total Estimated Price: $", totalPrice);
+    console.log("Selected Features:", selectedFeatureDetails.map(f => ({id: f.id, name: f.name, price: f.price })));
+    console.log(`Total Estimated Price (${TEMP_SELECTED_CURRENCY.toUpperCase()}): `, totalPrice);
 
-    // TODO: Implement actual submission to backend (e.g., Firestore)
-    // Example: await createCustomOrder({ ...customerDetails, numberOfPages: numPages, features: selectedFeatureDetails.map(f=>f.id), totalPrice });
 
     toast({
       title: "Request Submitted!",
-      description: `Your custom website request for "${customerDetails.projectName}" has been submitted. Total: $${totalPrice}. We'll be in touch!`,
+      description: `Your custom website request for "${customerDetails.projectName}" has been submitted. Total (${TEMP_SELECTED_CURRENCY.toUpperCase()}): ${totalPrice.toLocaleString()}. We'll be in touch!`,
     });
 
     setSelectedFeatures({});
     setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '', numberOfPages: '1' });
   };
+
+  const currencySymbol = TEMP_SELECTED_CURRENCY === 'usd' ? '$' : 'Rs.';
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
@@ -254,14 +260,16 @@ export default function MakeCustomWebsitePage() {
                   id="numberOfPages" 
                   name="numberOfPages" 
                   type="number"
-                  min="0" // Allow 0 pages
+                  min="0"
                   value={customerDetails.numberOfPages}
                   onChange={handleInputChange}
                   placeholder="e.g., 5" 
                   required 
                 />
               </div>
-               <p className="text-xs text-muted-foreground mt-1">Each page costs an additional ${PRICE_PER_PAGE}.</p>
+               <p className="text-xs text-muted-foreground mt-1">
+                 Each page costs an additional {currencySymbol}{PRICE_PER_PAGE[TEMP_SELECTED_CURRENCY].toLocaleString()}.
+               </p>
             </div>
             <div className="md:col-span-2">
               <Label htmlFor="projectDescription" className="font-semibold">Project Description</Label>
@@ -319,7 +327,9 @@ export default function MakeCustomWebsitePage() {
                               </div>
                             </div>
                             <div className="mt-auto pt-3 text-right">
-                                <p className="text-lg font-semibold text-primary">${feature.price.toLocaleString()}</p>
+                                <p className="text-lg font-semibold text-primary">
+                                  {currencySymbol}{feature.price[TEMP_SELECTED_CURRENCY].toLocaleString()}
+                                </p>
                             </div>
                           </CardContent>
                         </Card>
@@ -336,12 +346,12 @@ export default function MakeCustomWebsitePage() {
           <CardHeader>
             <div className="flex items-center space-x-3">
                 <DynamicIcon name="DollarSign" className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Estimated Total</CardTitle>
+                <CardTitle className="text-2xl">Estimated Total ({TEMP_SELECTED_CURRENCY.toUpperCase()})</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-5xl font-bold text-primary mb-2">
-              ${totalPrice.toLocaleString()}
+              {currencySymbol}{totalPrice.toLocaleString()}
             </p>
             <p className="text-sm text-muted-foreground">
               This is an estimate. We'll confirm all details with you.
@@ -357,3 +367,5 @@ export default function MakeCustomWebsitePage() {
     </div>
   );
 }
+
+    
