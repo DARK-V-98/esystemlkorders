@@ -4,8 +4,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  ListOrdered, LogOut, LogIn, UserCircle, Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard 
-} from "lucide-react";
+  ListOrdered, LogOut, LogIn, UserCircle, Package, Palette, Settings, Gem, ShieldCheck, LayoutDashboard 
+} from "lucide-react"; // Changed PlusCircle to Palette
 import {
   Sidebar,
   SidebarHeader,
@@ -18,14 +18,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
-import type { AuthUser } from "@/types"; // Import AuthUser for role type if needed
+import type { AuthUser } from "@/types"; 
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
   matchExact?: boolean;
-  allowedRoles?: Array<AuthUser['role']>; // For future role-based visibility
+  allowedRoles?: Array<AuthUser['role']>; 
 }
 
 const navItems: NavItem[] = [
@@ -35,31 +35,26 @@ const navItems: NavItem[] = [
     href: "/packages", 
     label: "Packages", 
     icon: Package,
-    // allowedRoles: ['user', 'developer', 'admin'] // Example for later
   },
   { 
-    href: "/packages/create", 
-    label: "Create Package", 
-    icon: PlusCircle,
-    // allowedRoles: ['developer', 'admin']
+    href: "/custom-website", 
+    label: "Make Custom Website", 
+    icon: Palette, // Changed icon
   },
   { 
     href: "/custom-pack", 
     label: "Custom Pack", 
     icon: Settings,
-    // allowedRoles: ['developer', 'admin']
   },
   { 
     href: "/vip", 
     label: "VIP Access", 
     icon: Gem,
-    // allowedRoles: ['admin'] // Or specific VIP role
   },
   { 
     href: "/admin", 
     label: "Admin Console", 
     icon: ShieldCheck,
-    // allowedRoles: ['admin']
   },
 ];
 
@@ -68,11 +63,10 @@ export function SidebarNavigation() {
   const { user, signOutUser, loading } = useAuth();
 
   // const visibleNavItems = navItems.filter(item => {
-  //   if (!item.allowedRoles) return true; // Show if no roles restriction
-  //   if (!user || !user.role) return false; // Hide if user has no role and item requires one
+  //   if (!item.allowedRoles) return true; 
+  //   if (!user || !user.role) return false; 
   //   return item.allowedRoles.includes(user.role);
   // });
-  // For now, show all items
   const visibleNavItems = navItems;
 
 
@@ -99,12 +93,7 @@ export function SidebarNavigation() {
         <SidebarMenu>
           {visibleNavItems.map((item) => {
             const isActive = item.matchExact ? pathname === item.href : pathname.startsWith(item.href);
-            // Add more specific active logic if needed, e.g., for /packages and /packages/create
-            // const isActive = item.matchExact 
-            // ? pathname === item.href 
-            // : (pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'));
-
-
+            
             return (
               <SidebarMenuItem key={item.label}>
                 <Link href={item.href} legacyBehavior={false} passHref={false}>

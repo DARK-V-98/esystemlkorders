@@ -1,15 +1,17 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered } from "lucide-react";
+import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered, Palette } from "lucide-react"; // Added Palette
 import Link from "next/link";
 import type { ReactNode } from "react";
+// import { useAuth } from "@/contexts/auth-context"; // To be used later
+// import type { AuthUser } from "@/types"; // To be used later
 
 interface MenuItem {
   title: string;
   description: string;
   icon: React.ElementType;
   href: string;
-  // Later: add allowedRoles?: Array<AuthUser['role']>;
+  // allowedRoles?: Array<AuthUser['role']>;
 }
 
 const menuItems: MenuItem[] = [
@@ -17,48 +19,47 @@ const menuItems: MenuItem[] = [
     title: "Manage Orders",
     description: "View and manage client project orders.",
     icon: ListOrdered,
-    href: "/", // Assuming '/' is the orders page
+    href: "/", 
   },
   {
     title: "Packages",
     description: "View and manage existing service packages.",
     icon: Package,
-    href: "/packages", // Placeholder, create this page later
+    href: "/packages", 
   },
   {
-    title: "Create Package",
-    description: "Add a new service package to the system.",
-    icon: PlusCircle,
-    href: "/packages/create", // Placeholder
+    title: "Make Custom Website",
+    description: "Design and order a unique website.",
+    icon: Palette, // Changed icon to Palette
+    href: "/custom-website", 
   },
   {
     title: "Custom Pack",
     description: "Configure a custom package for a client.",
     icon: Settings,
-    href: "/custom-pack", // Placeholder
+    href: "/custom-pack", 
   },
   {
     title: "VIP Features",
     description: "Access exclusive VIP services and features.",
     icon: Gem,
-    href: "/vip", // Placeholder
+    href: "/vip", 
   },
   {
     title: "Admin Console",
     description: "Manage application settings and users (Admin only).",
     icon: ShieldCheck,
-    href: "/admin", // Placeholder
+    href: "/admin", 
   },
 ];
 
 export default function MenuPage() {
-  // const { user } = useAuth(); // To be used later for role-based filtering
+  // const { user } = useAuth(); 
 
   // const visibleMenuItems = menuItems.filter(item => {
-  //   if (!item.allowedRoles || !user?.role) return true; // Show if no roles defined or user has no role (or show all to non-role users)
+  //   if (!item.allowedRoles || !user?.role) return true; 
   //   return item.allowedRoles.includes(user.role);
   // });
-  // For now, show all items:
   const visibleMenuItems = menuItems;
 
 
