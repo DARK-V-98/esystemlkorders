@@ -13,7 +13,8 @@ import {
   type User as FirebaseUser,
   type AuthProvider as FirebaseAuthProvider
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase'; // Import db
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'; // Import Firestore functions
 import type { AuthUser } from '@/types';
 import { useRouter } from 'next/navigation';
 
@@ -36,16 +37,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        // TODO: In a real app, fetch role from Firestore (e.g., custom claims or user profile collection)
-        // For now, defaulting to 'user'. This would be the place to implement role fetching logic.
-        const userRole: AuthUser['role'] = 'user'; 
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        let userRole: AuthUser['role'] = 'user'; // Default role
+
+        if (userDocSnap.exists()) {
+          userRole = userDocSnap.data()?.role || 'user';
+        }
+
+        // Prepare user data to save/update in Firestore
+        const userDataToSave: Partial<AuthUser> & { lastLogin?: any, createdDate?: any } = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+          role: userRole, // Set the determined or default role
+          lastLogin: serverTimestamp(),
+        };
+
+        if (!userDocSnap.exists()) {
+          userDataToSave.createdDate = serverTimestamp();
+        }
+        
+        await setDoc(userDocRef, userDataToSave, { merge: true });
 
         const appUser: AuthUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
-          role: userRole,
+          role: userRole, // Use the role from Firestore or default
         };
         setUser(appUser);
       } else {
@@ -83,8 +105,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUpWithEmail = async (email: string, pass: string) => {
     setLoading(true);
     try {
+      // Firebase automatically signs in the user after creation
       await createUserWithEmailAndPassword(auth, email, pass);
-      // Redirect is handled by onAuthStateChanged and useEffect in login page
+      // onAuthStateChanged will handle user data saving with default role
     } catch (error) {
       console.error("Error signing up with email:", error);
       throw error;

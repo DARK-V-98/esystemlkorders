@@ -9,54 +9,55 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, ListChecks } from "lucide-react";
+import { ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, ListChecks, ListOrdered, CheckSquare } from "lucide-react";
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc, Timestamp, query, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import { DEFAULT_FEATURE_CATEGORIES, DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
 import { DynamicIcon } from '@/components/icons';
+import type { Order } from '@/types';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { OrderStatusBadge } from "@/components/order-status-badge";
+import { formatDate } from "@/lib/data";
+import Link from "next/link";
+import { ExternalLink } from 'lucide-react';
 
 const FEATURES_COLLECTION = 'siteFeaturesConfig';
 const GLOBAL_PRICING_COLLECTION = 'siteGlobalConfig';
 const PAGE_PRICE_DOC_ID = 'pagePricing';
+const ORDERS_COLLECTION = 'orders';
 
 function LivePriceEditorContent() {
   const [liveCategories, setLiveCategories] = useState<FeatureCategory[]>([]);
   const [livePagePrice, setLivePagePrice] = useState<Price | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [savingStates, setSavingStates] = useState<Record<string, boolean>>({}); // e.g., { 'category-id': true, 'pagePrice': false }
+  const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   const fetchLivePrices = async () => {
     setIsLoading(true);
     try {
-      // Fetch feature categories
       const categoriesSnapshot = await getDocs(collection(db, FEATURES_COLLECTION));
       const fetchedCategoriesData: FeatureCategory[] = categoriesSnapshot.docs.map(docSnap => ({
         id: docSnap.id,
         ...(docSnap.data() as Omit<FeatureCategory, 'id'>),
       }));
-
-      // Sort fetched categories to match the order of DEFAULT_FEATURE_CATEGORIES for consistency
-      // This helps if some categories are added/removed manually from Firestore later
+      
       const sortedFetchedCategories = DEFAULT_FEATURE_CATEGORIES.map(defaultCat => {
         const foundCat = fetchedCategoriesData.find(fetchedCat => fetchedCat.id === defaultCat.id);
-        return foundCat || defaultCat; // Fallback to default if not found in Firestore
-      }).filter(cat => cat); // Ensure no undefined entries if a defaultCat ID somehow isn't in fetched.
-      
+        return foundCat || defaultCat; 
+      }).filter(cat => cat);
       setLiveCategories(sortedFetchedCategories);
 
-      // Fetch page price
       const pagePriceSnap = await getDoc(doc(db, GLOBAL_PRICING_COLLECTION, PAGE_PRICE_DOC_ID));
       if (pagePriceSnap.exists()) {
         setLivePagePrice(pagePriceSnap.data().pricePerPage as Price);
       } else {
         toast({ variant: "destructive", title: "Page Price Not Found", description: "Default page pricing is not set in Firestore."});
-        setLivePagePrice(DEFAULT_PRICE_PER_PAGE); // Fallback to default if not found
+        setLivePagePrice(DEFAULT_PRICE_PER_PAGE);
       }
     } catch (error) {
       console.error("Error fetching live prices:", error);
       toast({ variant: "destructive", title: "Fetch Error", description: "Could not load live prices from Firestore." });
-      // Fallback to defaults on error to allow editor to function minimally
       setLiveCategories(DEFAULT_FEATURE_CATEGORIES);
       setLivePagePrice(DEFAULT_PRICE_PER_PAGE);
     } finally {
@@ -88,7 +89,7 @@ function LivePriceEditorContent() {
 
   const handleFeaturePriceInputChange = (categoryIndex: number, featureIndex: number, currency: keyof Price, value: string) => {
     setLiveCategories(prevCategories => {
-      const newCategories = JSON.parse(JSON.stringify(prevCategories)); // Deep copy
+      const newCategories = JSON.parse(JSON.stringify(prevCategories)); 
       if (newCategories[categoryIndex]?.features[featureIndex]) {
          newCategories[categoryIndex].features[featureIndex].price[currency] = parseFloat(value) || 0;
       }
@@ -237,6 +238,126 @@ function LivePriceEditorContent() {
   );
 }
 
+function AdminOrdersManagement() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const fetchAdminOrders = async () => {
+    setIsLoading(true);
+    try {
+      const ordersQuery = query(collection(db, ORDERS_COLLECTION), firestoreOrderBy('createdDate', 'desc'));
+      const querySnapshot = await getDocs(ordersQuery);
+      const fetchedOrders: Order[] = querySnapshot.docs.map(docSnapshot => {
+        const data = docSnapshot.data();
+        return {
+          id: docSnapshot.id,
+          ...data,
+          createdDate: (data.createdDate as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+          deadline: (data.deadline as Timestamp)?.toDate().toISOString(),
+        } as Order;
+      });
+      setOrders(fetchedOrders);
+    } catch (error) {
+      console.error("Error fetching orders for admin:", error);
+      toast({ variant: "destructive", title: "Fetch Error", description: "Could not load orders." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdminOrders();
+  }, []);
+
+  const handleConfirmOrder = async (orderId: string) => {
+    setConfirmingOrderId(orderId);
+    try {
+      const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
+      await updateDoc(orderDocRef, {
+        status: "In Progress" 
+      });
+      toast({ title: "Order Confirmed", description: `Order ${orderId} status updated to In Progress.` });
+      // Refresh orders list
+      setOrders(prevOrders => prevOrders.map(o => o.id === orderId ? {...o, status: "In Progress"} : o));
+    } catch (error) {
+      console.error("Error confirming order:", error);
+      toast({ variant: "destructive", title: "Confirmation Error", description: `Could not confirm order ${orderId}.` });
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+        <span>Loading orders...</span>
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
+        <CardDescription>Review and confirm incoming project orders.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {orders.length === 0 ? (
+          <p className="text-muted-foreground text-center py-4">No orders found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order ID</TableHead>
+                  <TableHead>Client Name</TableHead>
+                  <TableHead>Project Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell>{order.clientName}</TableCell>
+                    <TableCell>{order.projectName}</TableCell>
+                    <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                    <TableCell>{formatDate(order.createdDate, 'PPp')}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/orders/${order.id}`}>
+                          View <ExternalLink className="ml-2 h-3 w-3" />
+                        </Link>
+                      </Button>
+                      {order.status === 'Pending' && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleConfirmOrder(order.id)}
+                          disabled={confirmingOrderId === order.id}
+                          variant="default"
+                          className="bg-green-500 hover:bg-green-600"
+                        >
+                          {confirmingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
+                          Confirm
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default function AdminConsolePage() {
   const [isSeeding, setIsSeeding] = useState(false);
@@ -306,19 +427,44 @@ export default function AdminConsolePage() {
           </h1>
         </div>
         <p className="text-muted-foreground text-lg">
-          Manage application settings and configurations.
+          Manage application settings, pricing, and orders.
         </p>
       </header>
 
-      <Tabs defaultValue="live-editor" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
-          <TabsTrigger value="seed-data">
-            <UploadCloud className="mr-2 h-4 w-4" /> Seed/Update Defaults
+      <Tabs defaultValue="manage-orders" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 mb-6">
+          <TabsTrigger value="manage-orders">
+            <ListOrdered className="mr-2 h-4 w-4" /> Manage Orders
           </TabsTrigger>
           <TabsTrigger value="live-editor">
             <Edit className="mr-2 h-4 w-4" /> Live Price Editor
           </TabsTrigger>
+          <TabsTrigger value="seed-data">
+            <UploadCloud className="mr-2 h-4 w-4" /> Seed/Update Defaults
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="manage-orders">
+           <AdminOrdersManagement />
+        </TabsContent>
+        
+        <TabsContent value="live-editor">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center">
+                <Edit className="mr-2 h-6 w-6 text-accent" />
+                Live Price Editor
+              </CardTitle>
+              <CardDescription>
+                Directly edit feature prices and page prices (USD and LKR) stored in Firestore.
+                Changes made here will reflect on the "Make Custom Website" page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LivePriceEditorContent />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="seed-data">
           <Card className="shadow-lg">
@@ -366,26 +512,7 @@ export default function AdminConsolePage() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="live-editor">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center">
-                <Edit className="mr-2 h-6 w-6 text-accent" />
-                Live Price Editor
-              </CardTitle>
-              <CardDescription>
-                Directly edit feature prices and page prices (USD and LKR) stored in Firestore.
-                Changes made here will reflect on the "Make Custom Website" page.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LivePriceEditorContent />
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
 }
-    

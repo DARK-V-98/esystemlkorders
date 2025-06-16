@@ -19,8 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth-context";
 import type { AuthUser } from "@/types"; 
-import { CurrencySwitcher } from "./currency-switcher"; // Import CurrencySwitcher
-import { Separator } from "./ui/separator"; // Import Separator
+import { CurrencySwitcher } from "./currency-switcher";
+import { Separator } from "./ui/separator";
 
 interface NavItem {
   href: string;
@@ -30,33 +30,38 @@ interface NavItem {
   allowedRoles?: Array<AuthUser['role']>; 
 }
 
-const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   { href: "/menu", label: "Dashboard", icon: LayoutDashboard, matchExact: true },
-  { href: "/", label: "Orders", icon: ListOrdered },
+  { href: "/", label: "Orders", icon: ListOrdered, allowedRoles: ['user', 'developer', 'admin'] },
   { 
     href: "/packages", 
     label: "Packages", 
     icon: Package,
+    allowedRoles: ['user', 'developer', 'admin']
   },
   { 
     href: "/custom-website", 
     label: "Make Custom Website", 
     icon: Palette,
+    allowedRoles: ['user', 'developer', 'admin']
   },
   { 
     href: "/custom-pack", 
     label: "Custom Pack", 
     icon: Settings,
+    allowedRoles: ['developer', 'admin']
   },
   { 
     href: "/vip", 
     label: "VIP Access", 
     icon: Gem,
+    allowedRoles: ['developer', 'admin'] // Example: VIP for dev/admin
   },
   { 
     href: "/admin", 
     label: "Admin Console", 
     icon: ShieldCheck,
+    allowedRoles: ['admin', 'developer'] // Only admin and developer
   },
 ];
 
@@ -64,7 +69,11 @@ export function SidebarNavigation() {
   const pathname = usePathname();
   const { user, signOutUser, loading } = useAuth();
 
-  const visibleNavItems = navItems;
+  const visibleNavItems = allNavItems.filter(item => {
+    if (!item.allowedRoles) return true; // Item is public or role check not needed
+    if (!user || !user.role) return false; // User not logged in or no role, hide restricted item
+    return item.allowedRoles.includes(user.role);
+  });
 
 
   return (
@@ -89,7 +98,7 @@ export function SidebarNavigation() {
       <SidebarContent className="p-2">
         <SidebarMenu>
           {visibleNavItems.map((item) => {
-            const isActive = item.matchExact ? pathname === item.href : pathname.startsWith(item.href);
+            const isActive = item.matchExact ? pathname === item.href : pathname.startsWith(item.href) && (item.href !== "/" || pathname === "/"); // Handle exact match for root
             
             return (
               <SidebarMenuItem key={item.label}>
@@ -112,7 +121,7 @@ export function SidebarNavigation() {
           <CurrencySwitcher />
         </div>
         <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center hidden">
-           <CurrencySwitcher /> {/* Also show collapsed version */}
+           <CurrencySwitcher />
         </div>
         
         <Separator className="bg-sidebar-border group-data-[collapsible=icon]:hidden" />
@@ -140,7 +149,7 @@ export function SidebarNavigation() {
              <span className="text-sm font-medium text-sidebar-foreground truncate max-w-[150px]" title={user.email || undefined}>
                 {user.displayName || user.email}
             </span>
-            <span className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
+            <span className="text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden capitalize">
                 Role: {user.role || 'N/A'}
             </span>
             <Button 
