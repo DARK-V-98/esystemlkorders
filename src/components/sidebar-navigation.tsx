@@ -59,16 +59,13 @@ export function SidebarNavigation() {
             const isActive = item.matchExact ? pathname === item.href : pathname.startsWith(item.href);
             return (
               <SidebarMenuItem key={item.label}>
-                <Link href={item.href} legacyBehavior passHref>
+                <Link href={item.href}>
                   <SidebarMenuButton
-                    asChild
                     isActive={isActive}
                     tooltip={{ children: item.label, side: "right", align: "center" }}
                   >
-                    <a>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </a>
+                    <item.icon />
+                    <span>{item.label}</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -91,3 +88,4 @@ export function SidebarNavigation() {
     </Sidebar>
   );
 }
+
