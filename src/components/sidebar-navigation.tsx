@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListOrdered, LayoutDashboard, Settings, Users } from "lucide-react";
+import { ListOrdered, LogOut, LogIn, UserCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarHeader,
@@ -12,10 +12,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  SidebarTrigger,
+  // SidebarTrigger, // Not used currently as sidebar is always open for authenticated users
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/auth-context";
 
 interface NavItem {
   href: string;
@@ -24,6 +25,7 @@ interface NavItem {
   matchExact?: boolean;
 }
 
+// Initial nav items, will be expanded based on roles later
 const navItems: NavItem[] = [
   { href: "/", label: "Orders", icon: ListOrdered, matchExact: true },
   // Add more navigation items here if needed in the future
@@ -33,6 +35,12 @@ const navItems: NavItem[] = [
 
 export function SidebarNavigation() {
   const pathname = usePathname();
+  const { user, signOutUser, loading } = useAuth();
+
+  // If loading auth state or no user (which implies redirect to login is happening),
+  // you might want to render a slimmed-down sidebar or nothing.
+  // For now, the ProtectedLayoutContent handles the main loading/redirect.
+  // This component will render once user state is resolved and user is present.
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left">
@@ -74,18 +82,60 @@ export function SidebarNavigation() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-4 mt-auto">
-        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+        {loading ? (
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+            <UserCircle className="h-9 w-9 text-sidebar-foreground/50 animate-pulse" />
+            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+              <span className="text-sm h-4 w-24 bg-sidebar-foreground/20 rounded animate-pulse"></span>
+              <span className="text-xs h-3 w-20 mt-1 bg-sidebar-foreground/10 rounded animate-pulse"></span>
+            </div>
+          </div>
+        ) : user ? (
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
            <Avatar className="h-9 w-9">
-             <AvatarImage src="https://placehold.co/40x40.png" alt="User Avatar" data-ai-hint="user avatar" />
-             <AvatarFallback>U</AvatarFallback>
+             {user.photoURL ? (
+                <AvatarImage src={user.photoURL} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar" />
+             ) : (
+                <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground">
+                  {user.email?.[0]?.toUpperCase() || <UserCircle size={20}/>}
+                </AvatarFallback>
+             )}
            </Avatar>
            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-             <span className="text-sm font-medium text-sidebar-foreground">Admin User</span>
-             <span className="text-xs text-sidebar-foreground/70">admin@esystemlk.com</span>
+             <span className="text-sm font-medium text-sidebar-foreground truncate max-w-[150px]" title={user.email || undefined}>
+                {user.displayName || user.email}
+            </span>
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={signOutUser} 
+                className="text-xs text-sidebar-foreground/70 hover:text-sidebar-primary hover:bg-sidebar-accent/50 justify-start p-0 h-auto group-data-[collapsible=icon]:hidden"
+                title="Sign Out"
+            >
+                <LogOut className="mr-1.5 h-3.5 w-3.5"/> Sign Out
+             </Button>
            </div>
-        </div>
+           {/* Icon-only sign out for collapsed sidebar */}
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={signOutUser} 
+                className="text-sidebar-foreground/70 hover:text-sidebar-primary hover:bg-sidebar-accent/50 hidden group-data-[collapsible=icon]:flex h-8 w-8"
+                title="Sign Out"
+            >
+                <LogOut className="h-4 w-4"/>
+             </Button>
+
+          </div>
+        ) : (
+           <Link href="/login" className="w-full">
+            <Button variant="default" className="w-full bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground group-data-[collapsible=icon]:aspect-square group-data-[collapsible=icon]:p-0">
+                <LogIn className="h-4 w-4 group-data-[collapsible=icon]:m-auto" />
+                <span className="ml-2 group-data-[collapsible=icon]:hidden">Sign In</span>
+            </Button>
+           </Link>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
 }
-

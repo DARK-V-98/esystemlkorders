@@ -28,3 +28,13 @@ export interface SortConfig {
   key: keyof Order | null;
   direction: 'ascending' | 'descending';
 }
+
+// New type for authenticated user
+export interface AuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  // Roles can be added here later, e.g., role?: 'user' | 'developer' | 'admin';
+  role?: string; // Placeholder for roles for now
+}
