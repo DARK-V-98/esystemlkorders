@@ -1,19 +1,241 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, type ChangeEvent, Fragment } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit } from "lucide-react";
+import { ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, ListChecks } from "lucide-react";
 import { db } from '@/lib/firebase';
-import { doc, writeBatch } from 'firebase/firestore';
-import { FEATURE_CATEGORIES, PRICE_PER_PAGE, type FeatureCategory, type Price as FeaturePrice } from '@/app/custom-website/page';
+import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc } from 'firebase/firestore';
+import { FEATURE_CATEGORIES as DEFAULT_FEATURE_CATEGORIES, PRICE_PER_PAGE as DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
+import { DynamicIcon } from '@/components/icons';
 
 const FEATURES_COLLECTION = 'siteFeaturesConfig';
 const GLOBAL_PRICING_COLLECTION = 'siteGlobalConfig';
 const PAGE_PRICE_DOC_ID = 'pagePricing';
+
+function LivePriceEditorContent() {
+  const [liveCategories, setLiveCategories] = useState<FeatureCategory[]>([]);
+  const [livePagePrice, setLivePagePrice] = useState<Price | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [savingStates, setSavingStates] = useState<Record<string, boolean>>({}); // e.g., { 'category-id': true, 'pagePrice': false }
+  const { toast } = useToast();
+
+  const fetchLivePrices = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch feature categories
+      const categoriesSnapshot = await getDocs(collection(db, FEATURES_COLLECTION));
+      const fetchedCategories: FeatureCategory[] = categoriesSnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...(docSnap.data() as Omit<FeatureCategory, 'id'>),
+      })).sort((a, b) => { // Ensure consistent order if possible, or match DEFAULT_FEATURE_CATEGORIES order
+        const aIndex = DEFAULT_FEATURE_CATEGORIES.findIndex(cat => cat.id === a.id);
+        const bIndex = DEFAULT_FEATURE_CATEGORIES.findIndex(cat => cat.id === b.id);
+        return aIndex - bIndex;
+      });
+      setLiveCategories(fetchedCategories);
+
+      // Fetch page price
+      const pagePriceSnap = await getDoc(doc(db, GLOBAL_PRICING_COLLECTION, PAGE_PRICE_DOC_ID));
+      if (pagePriceSnap.exists()) {
+        setLivePagePrice(pagePriceSnap.data().pricePerPage as Price);
+      } else {
+        toast({ variant: "destructive", title: "Page Price Not Found", description: "Default page pricing is not set in Firestore."});
+        setLivePagePrice(DEFAULT_PRICE_PER_PAGE); // Fallback to default if not found
+      }
+    } catch (error) {
+      console.error("Error fetching live prices:", error);
+      toast({ variant: "destructive", title: "Fetch Error", description: "Could not load live prices from Firestore." });
+      // Fallback to defaults on error to allow editor to function minimally
+      setLiveCategories(DEFAULT_FEATURE_CATEGORIES);
+      setLivePagePrice(DEFAULT_PRICE_PER_PAGE);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLivePrices();
+  }, []);
+
+  const handlePagePriceInputChange = (currency: keyof Price, value: string) => {
+    setLivePagePrice(prev => prev ? { ...prev, [currency]: parseFloat(value) || 0 } : null);
+  };
+
+  const handleSavePagePrice = async () => {
+    if (!livePagePrice) return;
+    setSavingStates(prev => ({ ...prev, pagePrice: true }));
+    try {
+      await setDoc(doc(db, GLOBAL_PRICING_COLLECTION, PAGE_PRICE_DOC_ID), { pricePerPage: livePagePrice });
+      toast({ title: "Page Price Saved", description: "Price per page has been updated in Firestore." });
+    } catch (error) {
+      console.error("Error saving page price:", error);
+      toast({ variant: "destructive", title: "Save Error", description: "Could not save page price." });
+    } finally {
+      setSavingStates(prev => ({ ...prev, pagePrice: false }));
+    }
+  };
+
+  const handleFeaturePriceInputChange = (categoryIndex: number, featureIndex: number, currency: keyof Price, value: string) => {
+    setLiveCategories(prevCategories => {
+      const newCategories = JSON.parse(JSON.stringify(prevCategories)); // Deep copy
+      if (newCategories[categoryIndex]?.features[featureIndex]) {
+         newCategories[categoryIndex].features[featureIndex].price[currency] = parseFloat(value) || 0;
+      }
+      return newCategories;
+    });
+  };
+
+  const handleSaveCategoryPrices = async (categoryId: string, categoryIndex: number) => {
+    const categoryToSave = liveCategories[categoryIndex];
+    if (!categoryToSave) return;
+
+    setSavingStates(prev => ({ ...prev, [categoryId]: true }));
+    try {
+      const categoryDocRef = doc(db, FEATURES_COLLECTION, categoryId);
+      // We only want to update fields that might change, esp. the features array with new prices.
+      // If other category metadata (name, description, iconName) is also editable, include it here.
+      // For now, assuming only feature prices change via this editor.
+      await updateDoc(categoryDocRef, { 
+        features: categoryToSave.features.map(f => ({
+            id: f.id,
+            name: f.name,
+            description: f.description,
+            price: f.price,
+            iconName: f.iconName || null
+        }))
+      });
+      toast({ title: "Category Prices Saved", description: `${categoryToSave.name} prices have been updated.` });
+    } catch (error) {
+      console.error(`Error saving prices for category ${categoryId}:`, error);
+      toast({ variant: "destructive", title: "Save Error", description: `Could not save prices for ${categoryToSave.name}.` });
+    } finally {
+      setSavingStates(prev => ({ ...prev, [categoryId]: false }));
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+        <span>Loading live prices...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center"><DollarSign className="mr-2 h-5 w-5 text-primary" />Edit Price Per Page</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="pagePriceUSD">Price Per Page (USD)</Label>
+            <Input 
+              id="pagePriceUSD" 
+              type="number" 
+              value={livePagePrice?.usd ?? ''} 
+              onChange={(e) => handlePagePriceInputChange('usd', e.target.value)}
+              className="mt-1"
+              placeholder="e.g., 50"
+            />
+          </div>
+          <div>
+            <Label htmlFor="pagePriceLKR">Price Per Page (LKR)</Label>
+            <Input 
+              id="pagePriceLKR" 
+              type="number" 
+              value={livePagePrice?.lkr ?? ''} 
+              onChange={(e) => handlePagePriceInputChange('lkr', e.target.value)}
+              className="mt-1"
+              placeholder="e.g., 15000"
+            />
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={handleSavePagePrice} disabled={savingStates['pagePrice']}>
+            {savingStates['pagePrice'] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save Page Price
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2 flex items-center">
+        <ListChecks className="mr-2 h-6 w-6 text-primary"/>
+        Edit Feature Prices
+      </h2>
+      {liveCategories.length === 0 && !isLoading && (
+        <p className="text-muted-foreground">No feature categories found in Firestore. Try seeding default data first.</p>
+      )}
+      <Accordion type="multiple" defaultValue={liveCategories.map(cat => cat.id)} className="w-full">
+        {liveCategories.map((category, categoryIndex) => (
+          <AccordionItem value={category.id} key={category.id}>
+            <AccordionTrigger className="hover:bg-muted/50 transition-colors text-lg">
+              <div className="flex items-center">
+                {category.iconName && <DynamicIcon name={category.iconName} className="mr-2 h-5 w-5 text-primary" />}
+                {category.name}
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="bg-background/50 p-4 space-y-4">
+              <p className="text-sm text-muted-foreground mb-3">{category.description}</p>
+              {category.features.map((feature, featureIndex) => (
+                <Card key={feature.id} className="p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold flex items-center">
+                      {feature.iconName && <DynamicIcon name={feature.iconName} className="mr-2 h-4 w-4 text-muted-foreground" />}
+                      {feature.name}
+                    </h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">{feature.description}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor={`${category.id}-${feature.id}-usd`}>Price (USD)</Label>
+                      <Input
+                        id={`${category.id}-${feature.id}-usd`}
+                        type="number"
+                        value={feature.price.usd}
+                        onChange={(e) => handleFeaturePriceInputChange(categoryIndex, featureIndex, 'usd', e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`${category.id}-${feature.id}-lkr`}>Price (LKR)</Label>
+                      <Input
+                        id={`${category.id}-${feature.id}-lkr`}
+                        type="number"
+                        value={feature.price.lkr}
+                        onChange={(e) => handleFeaturePriceInputChange(categoryIndex, featureIndex, 'lkr', e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              <div className="mt-4 flex justify-end">
+                <Button 
+                  onClick={() => handleSaveCategoryPrices(category.id, categoryIndex)} 
+                  disabled={savingStates[category.id]}
+                  variant="outline"
+                >
+                  {savingStates[category.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Save {category.name} Prices
+                </Button>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+}
+
 
 export default function AdminConsolePage() {
   const [isSeeding, setIsSeeding] = useState(false);
@@ -29,7 +251,7 @@ export default function AdminConsolePage() {
     try {
       const batch = writeBatch(db);
 
-      FEATURE_CATEGORIES.forEach((category: FeatureCategory) => {
+      DEFAULT_FEATURE_CATEGORIES.forEach((category: FeatureCategory) => {
         const categoryDocRef = doc(db, FEATURES_COLLECTION, category.id);
         const categoryData = {
           name: category.name,
@@ -47,7 +269,7 @@ export default function AdminConsolePage() {
       });
 
       const pagePriceDocRef = doc(db, GLOBAL_PRICING_COLLECTION, PAGE_PRICE_DOC_ID);
-      batch.set(pagePriceDocRef, { pricePerPage: PRICE_PER_PAGE });
+      batch.set(pagePriceDocRef, { pricePerPage: DEFAULT_PRICE_PER_PAGE });
 
       await batch.commit();
 
@@ -87,7 +309,7 @@ export default function AdminConsolePage() {
         </p>
       </header>
 
-      <Tabs defaultValue="seed-data" className="w-full">
+      <Tabs defaultValue="live-editor" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:w-[400px] mb-6">
           <TabsTrigger value="seed-data">
             <UploadCloud className="mr-2 h-4 w-4" /> Seed/Update Defaults
@@ -106,20 +328,20 @@ export default function AdminConsolePage() {
               </CardTitle>
               <CardDescription>
                 Use this section to initialize or overwrite the pricing data in Firestore
-                with the hardcoded default values from the application code (`src/app/custom-website/page.tsx`).
+                with the hardcoded default values from the application code.
+                This includes dual currency prices (USD and LKR).
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 This operation is useful for initial setup or for resetting the Firestore data
-                to the application's predefined defaults (including both USD and LKR prices).
+                to the application's predefined defaults.
               </p>
               <p className="text-sm font-medium text-destructive-foreground bg-destructive/10 border border-destructive p-3 rounded-md flex items-start">
                 <AlertTriangle className="h-5 w-5 mr-2 shrink-0 mt-0.5" />
                 <span>
                   <strong>Warning:</strong> Clicking this button will overwrite any existing data in the
                   `{FEATURES_COLLECTION}` and `{GLOBAL_PRICING_COLLECTION}/{PAGE_PRICE_DOC_ID}` paths in Firestore.
-                  Any manual changes made via the "Live Price Editor" (if implemented) will be lost for these paths.
                 </span>
               </p>
               <Button
@@ -130,7 +352,7 @@ export default function AdminConsolePage() {
               >
                 {isSeeding ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2"></div>
+                    <Loader2 className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2"></Loader2>
                     Seeding Defaults...
                   </>
                 ) : (
@@ -149,18 +371,15 @@ export default function AdminConsolePage() {
             <CardHeader>
               <CardTitle className="text-xl flex items-center">
                 <Edit className="mr-2 h-6 w-6 text-accent" />
-                Live Price Editor (Coming Soon)
+                Live Price Editor
               </CardTitle>
               <CardDescription>
-                This section will allow direct editing of feature prices and page prices
-                (USD and LKR) stored in Firestore.
+                Directly edit feature prices and page prices (USD and LKR) stored in Firestore.
+                Changes made here will reflect on the "Make Custom Website" page.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                The interface to fetch, display, and update live pricing data from Firestore will be implemented here.
-              </p>
-              {/* Placeholder for future forms/tables to edit prices */}
+              <LivePriceEditorContent />
             </CardContent>
           </Card>
         </TabsContent>
