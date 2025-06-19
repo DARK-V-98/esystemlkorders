@@ -148,12 +148,12 @@ export default function FillPackageDetailsPage() {
       phone: '',
       address: '',
       websiteName: '',
-      needsWebsiteSetupAssistance: "", 
-      hasDomain: "", 
+      needsWebsiteSetupAssistance: undefined, 
+      hasDomain: undefined, 
       domainName: '',
-      hasHosting: "", 
+      hasHosting: undefined, 
       hostingProvider: '',
-      needsBusinessEmail: "", 
+      needsBusinessEmail: undefined, 
       businessEmailCount: 0,
       baseColors: '',
       style: undefined, 
@@ -181,10 +181,10 @@ export default function FillPackageDetailsPage() {
   const watchedFeatures = watch(ADDON_FEATURES_CONFIG.map(f => f.id)); 
 
   useEffect(() => {
-    if (!orderData || isLoading) return; // Ensure orderData is loaded and not currently loading
+    if (!orderData || isLoading) return; 
 
     const baseLKR = orderData.budget; 
-    const baseUSD = Math.round(baseLKR / 300); // Simple conversion, adjust if needed
+    const baseUSD = Math.round(baseLKR / 300); 
     setBasePackagePrice({ lkr: baseLKR, usd: baseUSD });
 
     let currentAddonsTotalLKR = 0;
@@ -227,28 +227,36 @@ export default function FillPackageDetailsPage() {
              router.push(`/orders/${orderId}`);
              return;
           }
-          setOrderData(fetchedOrder); // Set orderData first
+          setOrderData(fetchedOrder); 
           
-          // Initialize base price and final calculated price
           const baseLKR = fetchedOrder.budget;
           const baseUSD = Math.round(baseLKR / 300); 
           setBasePackagePrice({ lkr: baseLKR, usd: baseUSD });
           
-          if (fetchedOrder.packageOrderDetails) {
-            const details = fetchedOrder.packageOrderDetails;
+          const details = fetchedOrder.packageOrderDetails;
+          if (details) {
             setValue('fullName', details.fullName || fetchedOrder.clientName || '');
             setValue('nicNumber', details.nicNumber || '');
             setValue('email', details.email || fetchedOrder.contactEmail || '');
             setValue('phone', details.phone || '');
             setValue('address', details.address || '');
             setValue('websiteName', details.websiteName || '');
-            setValue('needsWebsiteSetupAssistance', details.needsWebsiteSetupAssistance || "");
-            setValue('hasDomain', details.hasDomain || "");
+            
+            const needsSetupAssistVal = details.needsWebsiteSetupAssistance;
+            setValue('needsWebsiteSetupAssistance', (needsSetupAssistVal === "Yes" || needsSetupAssistVal === "No") ? needsSetupAssistVal : undefined);
+            
+            const hasDomainVal = details.hasDomain;
+            setValue('hasDomain', (hasDomainVal === "Yes" || hasDomainVal === "No") ? hasDomainVal : undefined);
             setValue('domainName', details.domainName || '');
-            setValue('hasHosting', details.hasHosting || "");
+
+            const hasHostingVal = details.hasHosting;
+            setValue('hasHosting', (hasHostingVal === "Yes" || hasHostingVal === "No") ? hasHostingVal : undefined);
             setValue('hostingProvider', details.hostingProvider || '');
-            setValue('needsBusinessEmail', details.needsBusinessEmail || "");
+            
+            const needsBizEmailVal = details.needsBusinessEmail;
+            setValue('needsBusinessEmail', (needsBizEmailVal === "Yes" || needsBizEmailVal === "No") ? needsBizEmailVal : undefined);
             setValue('businessEmailCount', Number(details.businessEmailCount) || 0);
+            
             setValue('baseColors', details.baseColors || '');
             setValue('style', details.style || undefined);
             setValue('styleOther', details.styleOther || '');
@@ -264,24 +272,21 @@ export default function FillPackageDetailsPage() {
             setValue('confirmDetailsCorrect', Boolean(details.confirmDetailsCorrect));
             setValue('agreeToShareMaterials', Boolean(details.agreeToShareMaterials));
 
-            // Set prices from saved details if available
             if(details.finalCalculatedPrice) setFinalCalculatedPrice(details.finalCalculatedPrice);
-            else setFinalCalculatedPrice({lkr: baseLKR, usd: baseUSD}); // Fallback if not saved
+            else setFinalCalculatedPrice({lkr: baseLKR, usd: baseUSD});
 
             if(details.addonsTotalPrice) setAddonsTotalPrice(details.addonsTotalPrice);
-            else setAddonsTotalPrice({lkr:0, usd:0}); // Fallback
-
-            // budgetRange will be updated by the useEffect for price calculation
+            else setAddonsTotalPrice({lkr:0, usd:0});
           } else {
-             setValue('email', fetchedOrder.contactEmail || '');
              setValue('fullName', fetchedOrder.clientName || '');
-             setValue('needsWebsiteSetupAssistance', "");
-             setValue('hasDomain', "");
-             setValue('hasHosting', "");
-             setValue('needsBusinessEmail', "");
+             setValue('email', fetchedOrder.contactEmail || '');
+             setValue('needsWebsiteSetupAssistance', undefined);
+             setValue('hasDomain', undefined);
+             setValue('hasHosting', undefined);
+             setValue('needsBusinessEmail', undefined);
              setValue('businessEmailCount', 0);
              setValue('style', undefined);
-             setFinalCalculatedPrice({ lkr: baseLKR, usd: baseUSD }); // Initial price is base price
+             setFinalCalculatedPrice({ lkr: baseLKR, usd: baseUSD }); 
              setAddonsTotalPrice({lkr:0, usd:0});
           }
         } else {
@@ -292,7 +297,7 @@ export default function FillPackageDetailsPage() {
         console.error("Error fetching order:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to load order details.' });
       } finally {
-        setIsLoading(false); // Set loading to false after all operations
+        setIsLoading(false); 
       }
     };
     fetchOrder();
@@ -307,8 +312,8 @@ export default function FillPackageDetailsPage() {
       .map(addon => ({
         id: addon.id,
         name: addon.name,
-        priceAtSubmission: addon.price, // Store the full Price object {lkr, usd}
-        selectedCurrency: selectedCurrency, // The currency active during submission
+        priceAtSubmission: addon.price, 
+        selectedCurrency: selectedCurrency, 
       }));
 
     try {
@@ -316,8 +321,8 @@ export default function FillPackageDetailsPage() {
       const dataToSave: Partial<PackageOrderDetailsForm> & { lastUpdated?: any, selectedAddons?: SelectedPackageAddon[], addonsTotalPrice?: Price, finalCalculatedPrice?: Price } = {
         ...data,
         selectedAddons: selectedAddonsData,
-        addonsTotalPrice: addonsTotalPrice, // Save the Price object {lkr, usd}
-        finalCalculatedPrice: finalCalculatedPrice, // Save the Price object {lkr, usd}
+        addonsTotalPrice: addonsTotalPrice, 
+        finalCalculatedPrice: finalCalculatedPrice, 
         budgetRange: `${currencySymbol}${finalCalculatedPrice[selectedCurrency].toLocaleString()} ${selectedCurrency.toUpperCase()}`, 
         lastUpdated: serverTimestamp(),
       };
@@ -390,7 +395,7 @@ export default function FillPackageDetailsPage() {
             <Controller name="needsWebsiteSetupAssistance" control={control} render={({ field }) => (
               <div>
                 <Label className="mb-1 block">Do you need assistance with website setup (domain, hosting, email configuration)?</Label>
-                <RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}>
+                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="setupAssistYes" /><Label htmlFor="setupAssistYes">Yes</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="setupAssistNo" /><Label htmlFor="setupAssistNo">No</Label></div>
                 </RadioGroup>
@@ -399,17 +404,17 @@ export default function FillPackageDetailsPage() {
             )} />
 
             <Controller name="hasDomain" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you have a domain?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="domainYes" /><Label htmlFor="domainYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="domainNo" /><Label htmlFor="domainNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasDomain?.message}</p></div>
+              <div><Label className="mb-1 block">Do you have a domain?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="domainYes" /><Label htmlFor="domainYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="domainNo" /><Label htmlFor="domainNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasDomain?.message}</p></div>
             )} />
             {watchHasDomain === 'Yes' && <div><Label htmlFor="domainName">If yes, Domain Name</Label><Input id="domainName" {...register("domainName")} disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.domainName?.message}</p></div>}
             
             <Controller name="hasHosting" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you have hosting?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="hostingYes" /><Label htmlFor="hostingYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="hostingNo" /><Label htmlFor="hostingNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasHosting?.message}</p></div>
+              <div><Label className="mb-1 block">Do you have hosting?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="hostingYes" /><Label htmlFor="hostingYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="hostingNo" /><Label htmlFor="hostingNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasHosting?.message}</p></div>
             )} />
             {watchHasHosting === 'Yes' && <div><Label htmlFor="hostingProvider">If yes, Hosting Provider Name</Label><Input id="hostingProvider" {...register("hostingProvider")} disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.hostingProvider?.message}</p></div>}
 
             <Controller name="needsBusinessEmail" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you need business email accounts?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="bEmailYes" /><Label htmlFor="bEmailYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="bEmailNo" /><Label htmlFor="bEmailNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.needsBusinessEmail?.message}</p></div>
+              <div><Label className="mb-1 block">Do you need business email accounts?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="bEmailYes" /><Label htmlFor="bEmailYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="bEmailNo" /><Label htmlFor="bEmailNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.needsBusinessEmail?.message}</p></div>
             )} />
             {watchNeedsBusinessEmail === 'Yes' && <div><Label htmlFor="businessEmailCount">If yes, how many?</Label><Input id="businessEmailCount" type="number" {...register("businessEmailCount", { valueAsNumber: true, setValueAs: (v) => parseInt(v, 10) || 0 })} min="1" disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.businessEmailCount?.message}</p></div>}
           </CardContent>
