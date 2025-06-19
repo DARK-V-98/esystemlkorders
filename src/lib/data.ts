@@ -21,6 +21,7 @@ export async function fetchOrders(
       
       return {
         id: docSnapshot.id,
+        formattedOrderId: data.formattedOrderId || docSnapshot.id, // Use formattedOrderId, fallback to doc ID
         clientName: data.clientName || 'N/A',
         projectName: data.projectName || 'N/A',
         projectType: data.projectType || 'Custom Build',
@@ -52,7 +53,7 @@ export async function fetchOrders(
       fetchedOrders = fetchedOrders.filter(order =>
         order.clientName.toLowerCase().includes(term) ||
         order.projectName.toLowerCase().includes(term) ||
-        order.id.toLowerCase().includes(term)
+        order.formattedOrderId.toLowerCase().includes(term) // Search by formattedOrderId
       );
     }
 
@@ -65,8 +66,13 @@ export async function fetchOrders(
         let comparison = 0;
         if (valA === undefined || valA === null) comparison = -1;
         else if (valB === undefined || valB === null) comparison = 1;
-        else if (valA > valB) comparison = 1;
-        else if (valA < valB) comparison = -1;
+        else if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB);
+        } else if (valA > valB) {
+          comparison = 1;
+        } else if (valA < valB) {
+          comparison = -1;
+        }
         
         return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
       });
@@ -91,6 +97,7 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
 
       return {
         id: docSnap.id,
+        formattedOrderId: data.formattedOrderId || docSnap.id, // Use formattedOrderId, fallback to doc ID
         clientName: data.clientName || 'N/A',
         projectName: data.projectName || 'N/A',
         projectType: data.projectType || 'Custom Build',

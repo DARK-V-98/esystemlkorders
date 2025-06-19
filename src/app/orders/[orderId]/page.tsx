@@ -12,7 +12,7 @@ import type { SelectedFeatureInOrder } from "@/types";
 
 interface OrderDetailPageProps {
   params: {
-    orderId: string;
+    orderId: string; // This is the Firestore document ID
   };
 }
 
@@ -50,7 +50,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           <h1 className="text-3xl font-bold font-headline text-primary">
             Order Details
           </h1>
-          <p className="text-muted-foreground">ID: {order.id}</p>
+          {/* Display formattedOrderId to the user */}
+          <p className="text-muted-foreground">ID: {order.formattedOrderId}</p>
         </div>
         <Button asChild variant="outline">
           <Link href="/">
@@ -132,7 +133,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </CardContent>
 
         <CardFooter className="bg-muted/50 p-6 flex flex-col sm:flex-row justify-between items-center gap-3">
-           <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+           {/* Display formattedOrderId in footer */}
+           <p className="text-xs text-muted-foreground">Order ID: {order.formattedOrderId}</p>
            <Button variant="default" className="bg-accent hover:bg-accent/90 w-full sm:w-auto">
               <Mail className="mr-2 h-4 w-4" /> Contact Client
            </Button>
@@ -168,4 +170,3 @@ function DetailItem({ icon: Icon, label, value, className, isLink }: DetailItemP
     </div>
   );
 }
-

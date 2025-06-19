@@ -69,7 +69,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
         processedOrders = processedOrders.filter(order =>
           order.clientName.toLowerCase().includes(term) ||
           order.projectName.toLowerCase().includes(term) ||
-          order.id.toLowerCase().includes(term)
+          order.formattedOrderId.toLowerCase().includes(term) // Search by formattedOrderId
         );
       }
 
@@ -81,8 +81,13 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
           let comparison = 0;
           if (valA === undefined || valA === null) comparison = -1;
           else if (valB === undefined || valB === null) comparison = 1;
-          else if (valA > valB) comparison = 1;
-          else if (valA < valB) comparison = -1;
+          else if (typeof valA === 'string' && typeof valB === 'string') { // Add string comparison for IDs
+            comparison = valA.localeCompare(valB);
+          } else if (valA > valB) {
+            comparison = 1;
+          } else if (valA < valB) {
+            comparison = -1;
+          }
           return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
         });
       }
@@ -197,8 +202,8 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>
-                  <Button variant="ghost" onClick={() => handleSort("id")} className="px-0">
-                    Order ID {renderSortIcon("id")}
+                  <Button variant="ghost" onClick={() => handleSort("formattedOrderId")} className="px-0">
+                    Order ID {renderSortIcon("formattedOrderId")}
                   </Button>
                 </TableHead>
                 <TableHead>
@@ -233,7 +238,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
               {orders.length > 0 ? (
                 orders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell className="font-medium">{order.formattedOrderId}</TableCell>
                     <TableCell>{order.clientName}</TableCell>
                     <TableCell>{order.projectName}</TableCell>
                     <TableCell>{order.projectType}</TableCell>
@@ -243,6 +248,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
                     <TableCell>{formatDate(order.deadline, 'PP')}</TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="outline" size="sm">
+                        {/* Link still uses the Firestore document ID for navigation */}
                         <Link href={`/orders/${order.id}`}>
                           View <ExternalLink className="ml-2 h-3 w-3" />
                         </Link>

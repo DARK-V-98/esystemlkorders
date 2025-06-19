@@ -253,6 +253,7 @@ function AdminOrdersManagement() {
         const data = docSnapshot.data();
         return {
           id: docSnapshot.id,
+          formattedOrderId: data.formattedOrderId || docSnapshot.id, // Include formattedOrderId
           ...data,
           createdDate: (data.createdDate as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
           deadline: (data.deadline as Timestamp)?.toDate().toISOString(),
@@ -271,19 +272,19 @@ function AdminOrdersManagement() {
     fetchAdminOrders();
   }, []);
 
-  const handleConfirmOrder = async (orderId: string) => {
-    setConfirmingOrderId(orderId);
+  const handleConfirmOrder = async (orderId: string, formattedOrderId: string) => {
+    setConfirmingOrderId(orderId); // Use Firestore doc ID for state tracking
     try {
       const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
       await updateDoc(orderDocRef, {
         status: "In Progress" 
       });
-      toast({ title: "Order Confirmed", description: `Order ${orderId} status updated to In Progress.` });
+      toast({ title: "Order Confirmed", description: `Order ${formattedOrderId} status updated to In Progress.` });
       // Refresh orders list
       setOrders(prevOrders => prevOrders.map(o => o.id === orderId ? {...o, status: "In Progress"} : o));
     } catch (error) {
       console.error("Error confirming order:", error);
-      toast({ variant: "destructive", title: "Confirmation Error", description: `Could not confirm order ${orderId}.` });
+      toast({ variant: "destructive", title: "Confirmation Error", description: `Could not confirm order ${formattedOrderId}.` });
     } finally {
       setConfirmingOrderId(null);
     }
@@ -323,13 +324,14 @@ function AdminOrdersManagement() {
               <TableBody>
                 {orders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell className="font-medium">{order.formattedOrderId}</TableCell>
                     <TableCell>{order.clientName}</TableCell>
                     <TableCell>{order.projectName}</TableCell>
                     <TableCell><OrderStatusBadge status={order.status} /></TableCell>
                     <TableCell>{formatDate(order.createdDate, 'PPp')}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button asChild variant="outline" size="sm">
+                        {/* Link still uses the Firestore document ID for navigation */}
                         <Link href={`/orders/${order.id}`}>
                           View <ExternalLink className="ml-2 h-3 w-3" />
                         </Link>
@@ -337,7 +339,7 @@ function AdminOrdersManagement() {
                       {order.status === 'Pending' && (
                         <Button 
                           size="sm" 
-                          onClick={() => handleConfirmOrder(order.id)}
+                          onClick={() => handleConfirmOrder(order.id, order.formattedOrderId)}
                           disabled={confirmingOrderId === order.id}
                           variant="default"
                           className="bg-green-500 hover:bg-green-600"

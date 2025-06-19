@@ -17,6 +17,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { FeatureCategory, FeatureOption, Price, CustomerDetailsForm as CustomerFormDetails, SelectedFeatureInOrder, Order } from '@/types'; // Adjusted import
 import { Loader2 } from 'lucide-react';
+import { generateFormattedOrderId } from '@/lib/utils'; // Import the new ID generator
 
 // Default data (could be fetched from Firestore in a real app for admin management)
 export const DEFAULT_PRICE_PER_PAGE: Price = { usd: 50, lkr: 15000 };
@@ -177,8 +178,11 @@ export default function MakeCustomWebsitePage() {
       setIsSubmitting(false);
       return;
     }
+    
+    const formattedOrderId = generateFormattedOrderId();
 
     const orderData: Omit<Order, 'id' | 'createdDate' | 'deadline'> & { createdDate: any } = {
+      formattedOrderId: formattedOrderId,
       clientName: customerDetails.name,
       projectName: customerDetails.projectName,
       projectType: 'Custom Build',
@@ -190,15 +194,16 @@ export default function MakeCustomWebsitePage() {
       numberOfPages: numPages,
       selectedCurrency: selectedCurrency,
       currencySymbol: currencySymbol,
-      userEmail: user.email || 'N/A', // Should have email if logged in
+      userEmail: user.email || 'N/A', 
       createdDate: serverTimestamp(),
     };
 
     try {
-      const docRef = await addDoc(collection(db, "orders"), orderData);
+      // Firestore will auto-generate the document ID ('id' in our Order type)
+      await addDoc(collection(db, "orders"), orderData);
       toast({
         title: "Request Submitted!",
-        description: `Your custom website request for "${customerDetails.projectName}" (Order ID: ${docRef.id}) has been submitted. Total (${selectedCurrency.toUpperCase()}): ${currencySymbol}${totalPrice.toLocaleString()}. We'll be in touch!`,
+        description: `Your custom website request for "${customerDetails.projectName}" (Order ID: ${formattedOrderId}) has been submitted. Total (${selectedCurrency.toUpperCase()}): ${currencySymbol}${totalPrice.toLocaleString()}. We'll be in touch!`,
       });
       setSelectedFeatures({});
       setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '', numberOfPages: '1' });
@@ -414,4 +419,3 @@ export default function MakeCustomWebsitePage() {
     </div>
   );
 }
-

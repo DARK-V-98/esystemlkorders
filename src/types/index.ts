@@ -22,6 +22,7 @@ export interface SelectedFeatureInOrder {
 
 export interface Order {
   id: string; // Firestore document ID
+  formattedOrderId: string; // User-facing formatted ID (e.g., A123456789)
   clientName: string; // From form: customerDetails.name
   projectName: string; // From form: customerDetails.projectName
   projectType: ProjectType; // Will be 'Custom Build' for these orders
