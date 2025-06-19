@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2, ExternalLink } from "lucide-react";
+import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2, ExternalLink, ShieldCheck, Settings as SettingsIcon } from "lucide-react"; // Added ShieldCheck, SettingsIcon
 import { useCurrency } from '@/contexts/currency-context';
 import { DynamicIcon } from '@/components/icons';
 import {
@@ -33,7 +33,7 @@ interface PackageInfo {
   priceLKR: number;
   priceDisplay: string;
   features: string[];
-  iconName: string;
+  iconName: string; // DynamicIcon will use this
   actionText: string;
   highlight?: boolean;
   isCustom?: boolean;
@@ -41,6 +41,7 @@ interface PackageInfo {
 }
 
 const packagesData: PackageInfo[] = [
+  // Budget Packs
   {
     id: 'budget-starter',
     title: 'Starter Pack',
@@ -61,7 +62,6 @@ const packagesData: PackageInfo[] = [
     features: ['Up to 5 Pages', 'Custom Design Elements', 'Basic SEO Setup', 'Blog Integration'],
     iconName: 'Tag',
     actionText: 'Order Growth Pack',
-    highlight: true,
     estimatedPages: 5,
   },
   {
@@ -70,16 +70,87 @@ const packagesData: PackageInfo[] = [
     description: 'A comprehensive solution for established businesses looking for a robust online platform.',
     priceLKR: 50000,
     priceDisplay: `Rs. 50,000`,
-    features: ['Up to 10 Pages', 'Advanced UI/UX', 'E-commerce Ready (Basic)', 'Analytics Integration'],
+    features: ['Up to 10 Pages', 'Advanced UI/UX', 'Basic E-commerce Ready', 'Analytics Integration'],
     iconName: 'Tag',
     actionText: 'Order Pro Pack',
     estimatedPages: 10,
   },
+  // Silver Packs
+  {
+    id: 'silver-starter',
+    title: 'Silver Starter Pack',
+    description: 'Enhanced design and more pages for growing businesses.',
+    priceLKR: 75000,
+    priceDisplay: `Rs. 75,000`,
+    features: ['Up to 12 Pages', 'Enhanced UI/UX Design', 'Basic SEO Setup', 'Blog Setup', 'Basic Content Writing Aid'],
+    iconName: 'ShieldCheck',
+    actionText: 'Order Silver Starter',
+    estimatedPages: 12,
+  },
+  {
+    id: 'silver-plus',
+    title: 'Silver Plus Pack',
+    description: 'A balanced package with advanced features and marketing tools.',
+    priceLKR: 100000,
+    priceDisplay: `Rs. 100,000`,
+    features: ['Up to 15 Pages', 'Advanced UI/UX', 'Advanced SEO Package', 'Social Media Integration (Full)', 'Logo Design Concept'],
+    iconName: 'ShieldCheck',
+    actionText: 'Order Silver Plus',
+    highlight: true,
+    estimatedPages: 15,
+  },
+  {
+    id: 'silver-premium',
+    title: 'Silver Premium Pack',
+    description: 'Comprehensive silver tier solution with e-commerce capabilities.',
+    priceLKR: 130000,
+    priceDisplay: `Rs. 130,000`,
+    features: ['Up to 20 Pages', 'Premium UI/UX Design', 'Full SEO & Analytics', 'Standard E-commerce Setup', 'Newsletter Integration'],
+    iconName: 'ShieldCheck',
+    actionText: 'Order Silver Premium',
+    estimatedPages: 20,
+  },
+  // Gold Packs
+  {
+    id: 'gold-essential',
+    title: 'Gold Essential Pack',
+    description: 'Top-tier features for businesses aiming for market leadership.',
+    priceLKR: 180000,
+    priceDisplay: `Rs. 180,000`,
+    features: ['Up to 25 Pages', 'Bespoke Design System', 'Full E-commerce Suite', 'Dedicated Project Manager (Light)', 'Content Strategy'],
+    iconName: 'Settings', // Using SettingsIcon for Gold
+    actionText: 'Order Gold Essential',
+    estimatedPages: 25,
+  },
+  {
+    id: 'gold-advanced',
+    title: 'Gold Advanced Pack',
+    description: 'Advanced solutions including custom integrations and reporting.',
+    priceLKR: 250000,
+    priceDisplay: `Rs. 250,000`,
+    features: ['Up to 30 Pages', 'Personalized UI/UX Workshop', 'Advanced E-commerce & Payments', 'Custom API Integrations (1-2)', 'Advanced Analytics & Reporting'],
+    iconName: 'Settings', // Using SettingsIcon for Gold
+    actionText: 'Order Gold Advanced',
+    estimatedPages: 30,
+  },
+  {
+    id: 'gold-ultimate',
+    title: 'Gold Ultimate Pack',
+    description: 'The ultimate package for a dominant online presence and performance.',
+    priceLKR: 350000,
+    priceDisplay: `Rs. 350,000`,
+    features: ['30+ Pages & Scalable Architecture', 'Full Branding Suite (Logo, Guidelines)', 'Premium E-commerce & Custom Features', 'Performance Optimization & Security Suite', 'Priority Support & Training Session'],
+    iconName: 'Settings', // Using SettingsIcon for Gold
+    actionText: 'Order Gold Ultimate',
+    highlight: true,
+    estimatedPages: 35, // Estimate, can be more
+  },
+  // Custom Package
   {
     id: 'custom-package',
     title: 'Make Your Custom Package',
     description: 'Tailor a website to your exact needs. Choose features, pages, and design elements with our interactive builder.',
-    priceLKR: 0,
+    priceLKR: 0, // Dynamic
     priceDisplay: 'Dynamic Pricing',
     features: ['Fully Customizable', 'Interactive Builder', 'Personalized Quote', 'Scalable Solution'],
     iconName: 'Palette',
@@ -89,7 +160,7 @@ const packagesData: PackageInfo[] = [
 ];
 
 export default function PackagesPage() {
-  const { currencySymbol, selectedCurrency } = useCurrency();
+  const { currencySymbol, selectedCurrency } = useCurrency(); // currency context not used for these LKR-only packages
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState<PackageInfo | null>(null);
@@ -111,9 +182,9 @@ export default function PackagesPage() {
 
     const formattedOrderId = generateFormattedOrderId();
     const orderFeatures: SelectedFeatureInOrder[] = selectedPackage.features.map(featureName => ({
-      id: featureName.toLowerCase().replace(/\s+/g, '-'),
+      id: featureName.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''), // Sanitize ID
       name: featureName,
-      price: 0,
+      price: 0, // Price is package-level, features are inclusive
       currency: 'lkr',
       currencySymbol: 'Rs.',
     }));
@@ -122,8 +193,9 @@ export default function PackagesPage() {
       formattedOrderId: formattedOrderId,
       clientName: user.displayName || user.email || 'N/A',
       projectName: selectedPackage.title,
-      projectType: 'Budget Package',
+      projectType: 'Budget Package', // All predefined packages use this type, form handles specifics
       status: 'Pending',
+      paymentStatus: 'Not Paid',
       description: selectedPackage.description,
       requestedFeatures: orderFeatures,
       contactEmail: user.email || 'N/A',
@@ -181,7 +253,7 @@ export default function PackagesPage() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {packagesData.map((pkg) => (
             <Card
               key={pkg.id}
@@ -254,3 +326,5 @@ export default function PackagesPage() {
     </AlertDialog>
   );
 }
+
+    
