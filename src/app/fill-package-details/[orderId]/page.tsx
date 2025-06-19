@@ -148,12 +148,12 @@ export default function FillPackageDetailsPage() {
       phone: '',
       address: '',
       websiteName: '',
-      needsWebsiteSetupAssistance: undefined, 
-      hasDomain: undefined, 
+      needsWebsiteSetupAssistance: "", 
+      hasDomain: "", 
       domainName: '',
-      hasHosting: undefined, 
+      hasHosting: "", 
       hostingProvider: '',
-      needsBusinessEmail: undefined, 
+      needsBusinessEmail: "", 
       businessEmailCount: 0,
       baseColors: '',
       style: undefined, 
@@ -181,7 +181,7 @@ export default function FillPackageDetailsPage() {
   const watchedFeatures = watch(ADDON_FEATURES_CONFIG.map(f => f.id)); 
 
   useEffect(() => {
-    if (!orderData || isLoading) return; 
+    if (isLoading || !orderData) return; 
 
     const baseLKR = orderData.budget; 
     const baseUSD = Math.round(baseLKR / 300); 
@@ -220,6 +220,7 @@ export default function FillPackageDetailsPage() {
       try {
         const orderDocRef = doc(db, 'orders', orderId);
         const orderSnap = await getDoc(orderDocRef);
+
         if (orderSnap.exists()) {
           const fetchedOrder = orderSnap.data() as Order;
           if (fetchedOrder.projectType !== 'Budget Package') {
@@ -243,18 +244,18 @@ export default function FillPackageDetailsPage() {
             setValue('websiteName', details.websiteName || '');
             
             const needsSetupAssistVal = details.needsWebsiteSetupAssistance;
-            setValue('needsWebsiteSetupAssistance', (needsSetupAssistVal === "Yes" || needsSetupAssistVal === "No") ? needsSetupAssistVal : undefined);
+            setValue('needsWebsiteSetupAssistance', (needsSetupAssistVal === "Yes" || needsSetupAssistVal === "No") ? needsSetupAssistVal : "");
             
             const hasDomainVal = details.hasDomain;
-            setValue('hasDomain', (hasDomainVal === "Yes" || hasDomainVal === "No") ? hasDomainVal : undefined);
+            setValue('hasDomain', (hasDomainVal === "Yes" || hasDomainVal === "No") ? hasDomainVal : "");
             setValue('domainName', details.domainName || '');
 
             const hasHostingVal = details.hasHosting;
-            setValue('hasHosting', (hasHostingVal === "Yes" || hasHostingVal === "No") ? hasHostingVal : undefined);
+            setValue('hasHosting', (hasHostingVal === "Yes" || hasHostingVal === "No") ? hasHostingVal : "");
             setValue('hostingProvider', details.hostingProvider || '');
             
             const needsBizEmailVal = details.needsBusinessEmail;
-            setValue('needsBusinessEmail', (needsBizEmailVal === "Yes" || needsBizEmailVal === "No") ? needsBizEmailVal : undefined);
+            setValue('needsBusinessEmail', (needsBizEmailVal === "Yes" || needsBizEmailVal === "No") ? needsBizEmailVal : "");
             setValue('businessEmailCount', Number(details.businessEmailCount) || 0);
             
             setValue('baseColors', details.baseColors || '');
@@ -280,10 +281,10 @@ export default function FillPackageDetailsPage() {
           } else {
              setValue('fullName', fetchedOrder.clientName || '');
              setValue('email', fetchedOrder.contactEmail || '');
-             setValue('needsWebsiteSetupAssistance', undefined);
-             setValue('hasDomain', undefined);
-             setValue('hasHosting', undefined);
-             setValue('needsBusinessEmail', undefined);
+             setValue('needsWebsiteSetupAssistance', "");
+             setValue('hasDomain', "");
+             setValue('hasHosting', "");
+             setValue('needsBusinessEmail', "");
              setValue('businessEmailCount', 0);
              setValue('style', undefined);
              setFinalCalculatedPrice({ lkr: baseLKR, usd: baseUSD }); 
@@ -395,7 +396,7 @@ export default function FillPackageDetailsPage() {
             <Controller name="needsWebsiteSetupAssistance" control={control} render={({ field }) => (
               <div>
                 <Label className="mb-1 block">Do you need assistance with website setup (domain, hosting, email configuration)?</Label>
-                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}>
+                <RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="setupAssistYes" /><Label htmlFor="setupAssistYes">Yes</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="setupAssistNo" /><Label htmlFor="setupAssistNo">No</Label></div>
                 </RadioGroup>
@@ -404,17 +405,17 @@ export default function FillPackageDetailsPage() {
             )} />
 
             <Controller name="hasDomain" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you have a domain?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="domainYes" /><Label htmlFor="domainYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="domainNo" /><Label htmlFor="domainNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasDomain?.message}</p></div>
+              <div><Label className="mb-1 block">Do you have a domain?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="domainYes" /><Label htmlFor="domainYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="domainNo" /><Label htmlFor="domainNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasDomain?.message}</p></div>
             )} />
             {watchHasDomain === 'Yes' && <div><Label htmlFor="domainName">If yes, Domain Name</Label><Input id="domainName" {...register("domainName")} disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.domainName?.message}</p></div>}
             
             <Controller name="hasHosting" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you have hosting?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="hostingYes" /><Label htmlFor="hostingYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="hostingNo" /><Label htmlFor="hostingNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasHosting?.message}</p></div>
+              <div><Label className="mb-1 block">Do you have hosting?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="hostingYes" /><Label htmlFor="hostingYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="hostingNo" /><Label htmlFor="hostingNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasHosting?.message}</p></div>
             )} />
             {watchHasHosting === 'Yes' && <div><Label htmlFor="hostingProvider">If yes, Hosting Provider Name</Label><Input id="hostingProvider" {...register("hostingProvider")} disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.hostingProvider?.message}</p></div>}
 
             <Controller name="needsBusinessEmail" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you need business email accounts?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="bEmailYes" /><Label htmlFor="bEmailYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="bEmailNo" /><Label htmlFor="bEmailNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.needsBusinessEmail?.message}</p></div>
+              <div><Label className="mb-1 block">Do you need business email accounts?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="bEmailYes" /><Label htmlFor="bEmailYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="bEmailNo" /><Label htmlFor="bEmailNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.needsBusinessEmail?.message}</p></div>
             )} />
             {watchNeedsBusinessEmail === 'Yes' && <div><Label htmlFor="businessEmailCount">If yes, how many?</Label><Input id="businessEmailCount" type="number" {...register("businessEmailCount", { valueAsNumber: true, setValueAs: (v) => parseInt(v, 10) || 0 })} min="1" disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.businessEmailCount?.message}</p></div>}
           </CardContent>
