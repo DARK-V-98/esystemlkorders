@@ -1,80 +1,158 @@
 
 "use client";
 
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Layers, Palette, Tag } from "lucide-react"; // Using Tag for budget, Palette for custom
+import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2 } from "lucide-react";
 import { useCurrency } from '@/contexts/currency-context';
 import { DynamicIcon } from '@/components/icons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { generateFormattedOrderId } from '@/lib/utils';
+import type { Order, SelectedFeatureInOrder } from '@/types';
 
 interface PackageInfo {
   id: string;
   title: string;
   description: string;
   priceLKR: number;
-  priceDisplay: string; // Formatted price string
+  priceDisplay: string; 
   features: string[];
   iconName: string; 
-  href?: string;
   actionText: string;
   highlight?: boolean;
+  isCustom?: boolean; // To differentiate the custom package link
+  estimatedPages?: number; // For order creation
 }
 
+const packagesData: PackageInfo[] = [
+  {
+    id: 'budget-starter',
+    title: 'Starter Pack',
+    description: 'An essential package to get your presence online quickly and effectively.',
+    priceLKR: 15000,
+    priceDisplay: `Rs. 15,000`, 
+    features: ['Basic 3-Page Design', 'Mobile Responsive', 'Contact Form', 'Social Media Links'],
+    iconName: 'Tag',
+    actionText: 'Order Starter Pack',
+    estimatedPages: 3,
+  },
+  {
+    id: 'budget-growth',
+    title: 'Growth Pack',
+    description: 'More features to help your business grow and engage with customers.',
+    priceLKR: 30000,
+    priceDisplay: `Rs. 30,000`,
+    features: ['Up to 5 Pages', 'Custom Design Elements', 'Basic SEO Setup', 'Blog Integration'],
+    iconName: 'Tag',
+    actionText: 'Order Growth Pack',
+    highlight: true,
+    estimatedPages: 5,
+  },
+  {
+    id: 'budget-pro',
+    title: 'Pro Pack',
+    description: 'A comprehensive solution for established businesses looking for a robust online platform.',
+    priceLKR: 50000,
+    priceDisplay: `Rs. 50,000`,
+    features: ['Up to 10 Pages', 'Advanced UI/UX', 'E-commerce Ready (Basic)', 'Analytics Integration'],
+    iconName: 'Tag',
+    actionText: 'Order Pro Pack',
+    estimatedPages: 10,
+  },
+  {
+    id: 'custom-package',
+    title: 'Make Your Custom Package',
+    description: 'Tailor a website to your exact needs. Choose features, pages, and design elements with our interactive builder.',
+    priceLKR: 0, 
+    priceDisplay: 'Dynamic Pricing',
+    features: ['Fully Customizable', 'Interactive Builder', 'Personalized Quote', 'Scalable Solution'],
+    iconName: 'Palette', 
+    actionText: 'Build Your Website',
+    isCustom: true,
+  },
+];
+
 export default function PackagesPage() {
-  const { currencySymbol, selectedCurrency } = useCurrency(); // We might only show LKR for these fixed packages
+  const { currencySymbol, selectedCurrency } = useCurrency(); 
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [selectedPackage, setSelectedPackage] = useState<PackageInfo | null>(null);
+  const [isOrdering, setIsOrdering] = useState(false);
 
-  // For fixed LKR packages, we'll display LKR regardless of currency selection,
-  // or you could adapt to show an equivalent USD if desired.
-  // For now, let's stick to the specified LKR amounts.
+  const handleOrderPackage = async () => {
+    if (!selectedPackage || selectedPackage.isCustom) return;
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please log in to order a package.",
+      });
+      setSelectedPackage(null); // Close dialog
+      return;
+    }
 
-  const packagesData: PackageInfo[] = [
-    {
-      id: 'budget-starter',
-      title: 'Starter Pack',
-      description: 'An essential package to get your presence online quickly and effectively.',
-      priceLKR: 15000,
-      priceDisplay: `Rs. 15,000`, 
-      features: ['Basic 3-Page Design', 'Mobile Responsive', 'Contact Form', 'Social Media Links'],
-      iconName: 'Tag',
-      actionText: 'Get Started',
-      href: '/contact?package=starter', // Example contact link
-    },
-    {
-      id: 'budget-growth',
-      title: 'Growth Pack',
-      description: 'More features to help your business grow and engage with customers.',
-      priceLKR: 30000,
-      priceDisplay: `Rs. 30,000`,
-      features: ['Up to 5 Pages', 'Custom Design Elements', 'Basic SEO Setup', 'Blog Integration'],
-      iconName: 'Tag',
-      actionText: 'Choose Plan',
-      highlight: true,
-      href: '/contact?package=growth', // Example contact link
-    },
-    {
-      id: 'budget-pro',
-      title: 'Pro Pack',
-      description: 'A comprehensive solution for established businesses looking for a robust online platform.',
-      priceLKR: 50000,
-      priceDisplay: `Rs. 50,000`,
-      features: ['Up to 10 Pages', 'Advanced UI/UX', 'E-commerce Ready (Basic)', 'Analytics Integration'],
-      iconName: 'Tag',
-      actionText: 'Select Pro',
-      href: '/contact?package=pro', // Example contact link
-    },
-    {
-      id: 'custom-package',
-      title: 'Make Your Custom Package',
-      description: 'Tailor a website to your exact needs. Choose features, pages, and design elements with our interactive builder.',
-      priceLKR: 0, // Price is dynamic
-      priceDisplay: 'Dynamic Pricing',
-      features: ['Fully Customizable', 'Interactive Builder', 'Personalized Quote', 'Scalable Solution'],
-      iconName: 'Palette', 
-      href: '/custom-website',
-      actionText: 'Build Your Website',
-    },
-  ];
+    setIsOrdering(true);
+
+    const formattedOrderId = generateFormattedOrderId();
+    const orderFeatures: SelectedFeatureInOrder[] = selectedPackage.features.map(featureName => ({
+      id: featureName.toLowerCase().replace(/\s+/g, '-'), // simple id generation
+      name: featureName,
+      price: 0, // Individual feature price is not applicable here, package price is budget
+      currency: 'lkr',
+      currencySymbol: 'Rs.',
+    }));
+
+    const orderData: Omit<Order, 'id' | 'createdDate' | 'deadline' | 'projectDetails'> & { createdDate: any } = {
+      formattedOrderId: formattedOrderId,
+      clientName: user.displayName || user.email || 'N/A',
+      projectName: selectedPackage.title,
+      projectType: 'Budget Package',
+      status: 'Pending',
+      description: selectedPackage.description,
+      requestedFeatures: orderFeatures,
+      contactEmail: user.email || 'N/A',
+      budget: selectedPackage.priceLKR,
+      numberOfPages: selectedPackage.estimatedPages || 0, // Use estimatedPages or default
+      selectedCurrency: 'lkr',
+      currencySymbol: 'Rs.',
+      userEmail: user.email || 'N/A',
+      createdDate: serverTimestamp(),
+    };
+
+    try {
+      await addDoc(collection(db, "orders"), orderData);
+      toast({
+        title: "Package Ordered!",
+        description: `Your order for the ${selectedPackage.title} (Order ID: ${formattedOrderId}) has been placed. We'll be in touch soon.`,
+      });
+    } catch (error) {
+      console.error("Error ordering package:", error);
+      toast({
+        variant: "destructive",
+        title: "Order Failed",
+        description: "There was an error placing your order. Please try again.",
+      });
+    } finally {
+      setIsOrdering(false);
+      setSelectedPackage(null); // Close dialog
+    }
+  };
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
@@ -118,22 +196,49 @@ export default function PackagesPage() {
               </ul>
             </CardContent>
             <CardFooter className="p-6 bg-muted/20 mt-auto">
-              {pkg.href ? (
+              {pkg.isCustom ? (
                 <Button asChild className={`w-full text-lg py-6 ${pkg.highlight ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-accent hover:bg-accent/80 text-accent-foreground'}`}>
-                  <Link href={pkg.href}>
+                  <Link href="/custom-website">
                     {pkg.actionText} <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
               ) : (
-                <Button className="w-full text-lg py-6" disabled>
-                  {pkg.actionText}
-                </Button>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    onClick={() => setSelectedPackage(pkg)}
+                    className={`w-full text-lg py-6 ${pkg.highlight ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-accent hover:bg-accent/80 text-accent-foreground'}`}
+                  >
+                    <ShoppingCart className="mr-2 h-5 w-5" /> {pkg.actionText}
+                  </Button>
+                </AlertDialogTrigger>
               )}
             </CardFooter>
           </Card>
         ))}
       </div>
+
+      {selectedPackage && !selectedPackage.isCustom && (
+        <AlertDialog open={!!selectedPackage} onOpenChange={(open) => { if (!open) setSelectedPackage(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Package Order</AlertDialogTitle>
+              <AlertDialogDescription>
+                You are about to order the <strong>{selectedPackage.title}</strong> for <strong>{selectedPackage.priceDisplay}</strong>.
+                Are you sure you want to proceed?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setSelectedPackage(null)} disabled={isOrdering}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleOrderPackage} disabled={isOrdering}>
+                {isOrdering && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirm Order
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
-
