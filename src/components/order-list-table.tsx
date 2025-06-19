@@ -168,7 +168,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
                         <SelectValue placeholder="All Statuses" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Statuses</SelectItem>
+                        {/* <SelectItem value="">All Statuses</SelectItem> <- REMOVED */}
                         {ORDER_STATUSES.map(status => (
                           <SelectItem key={status} value={status}>{status}</SelectItem>
                         ))}
@@ -185,7 +185,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
                         <SelectValue placeholder="All Types" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Types</SelectItem>
+                        {/* <SelectItem value="">All Types</SelectItem> <- REMOVED */}
                         {PROJECT_TYPES.map(type => (
                           <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
@@ -273,3 +273,4 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
     </Card>
   );
 }
+
