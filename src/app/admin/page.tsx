@@ -12,16 +12,17 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, 
   ListChecks, ListOrdered, CheckSquare, Search, ExternalLink, XCircle, Settings, Clock, 
-  MoreVertical, PauseCircle, PlayCircle, Trash2, Mail 
+  MoreVertical, PauseCircle, PlayCircle, Trash2, Mail, CreditCard, Banknote // Added CreditCard, Banknote
 } from "lucide-react";
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc, Timestamp, query, orderBy as firestoreOrderBy, deleteDoc } from 'firebase/firestore';
 import { DEFAULT_FEATURE_CATEGORIES, DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
 import { DynamicIcon } from '@/components/icons';
-import type { Order, OrderStatus } from '@/types';
+import type { Order, OrderStatus, PaymentStatus } from '@/types'; // Added PaymentStatus
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { OrderStatusBadge } from "@/components/order-status-badge";
-import { formatDate } from "@/lib/data";
+import { PaymentStatusBadge } from "@/components/payment-status-badge"; // Import PaymentStatusBadge
+import { formatDate, PAYMENT_STATUSES } from "@/lib/data"; // Added PAYMENT_STATUSES
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -30,6 +31,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -266,7 +271,7 @@ function AdminOrdersManagement() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [updatingStates, setUpdatingStates] = useState<Record<string, { orderStatus?: boolean; paymentStatus?: boolean }>>({});
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
   const [adminSearchTerm, setAdminSearchTerm] = useState('');
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
@@ -285,6 +290,7 @@ function AdminOrdersManagement() {
           ...data,
           createdDate: (data.createdDate as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
           deadline: (data.deadline as Timestamp)?.toDate().toISOString(),
+          paymentStatus: data.paymentStatus || 'Not Paid', // Ensure paymentStatus defaults
         } as Order;
       });
       setAllOrders(fetchedOrders);
@@ -313,16 +319,27 @@ function AdminOrdersManagement() {
     }
   }, [adminSearchTerm, allOrders]);
 
+  const setUpdatingState = (orderId: string, type: 'orderStatus' | 'paymentStatus', value: boolean) => {
+    setUpdatingStates(prev => ({
+      ...prev,
+      [orderId]: { ...prev[orderId], [type]: value }
+    }));
+  };
+
+  const getUpdatingState = (orderId: string, type: 'orderStatus' | 'paymentStatus') => {
+    return updatingStates[orderId]?.[type] || false;
+  };
+
 
   const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus, formattedOrderId: string) => {
-    setUpdatingOrderId(orderId); 
+    setUpdatingState(orderId, 'orderStatus', true);
     try {
       const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
       const orderToUpdate = allOrders.find(o => o.id === orderId);
 
       if (!orderToUpdate) {
         toast({ variant: "destructive", title: "Update Error", description: `Order ${formattedOrderId} not found.` });
-        setUpdatingOrderId(null);
+        setUpdatingState(orderId, 'orderStatus', false);
         return;
       }
       
@@ -333,11 +350,7 @@ function AdminOrdersManagement() {
       
       const updatedOrders = allOrders.map(o => o.id === orderId ? {...o, status: newStatus} : o);
       setAllOrders(updatedOrders);
-      setFilteredOrders(
-        updatedOrders.filter(order =>
-          order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase()) || adminSearchTerm === ''
-        )
-      );
+      // setFilteredOrders remains updated via its own useEffect dependency on allOrders
 
       if (orderToUpdate.contactEmail) {
         const emailInput = {
@@ -388,9 +401,28 @@ function AdminOrdersManagement() {
       console.error(`Error updating order ${formattedOrderId} to ${newStatus}:`, error);
       toast({ variant: "destructive", title: "Update Error", description: `Could not update order ${formattedOrderId}.` });
     } finally {
-      setUpdatingOrderId(null);
+      setUpdatingState(orderId, 'orderStatus', false);
     }
   };
+  
+  const handleUpdatePaymentStatus = async (orderId: string, newPaymentStatus: PaymentStatus, formattedOrderId: string) => {
+    setUpdatingState(orderId, 'paymentStatus', true);
+    try {
+      const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
+      await updateDoc(orderDocRef, { paymentStatus: newPaymentStatus });
+      toast({ title: "Payment Status Updated", description: `Order ${formattedOrderId} payment status changed to ${newPaymentStatus}.` });
+      
+      const updatedOrders = allOrders.map(o => o.id === orderId ? {...o, paymentStatus: newPaymentStatus} : o);
+      setAllOrders(updatedOrders);
+      // No email notification for payment status change by default
+    } catch (error) {
+      console.error(`Error updating payment status for order ${formattedOrderId} to ${newPaymentStatus}:`, error);
+      toast({ variant: "destructive", title: "Update Error", description: `Could not update payment status for order ${formattedOrderId}.` });
+    } finally {
+      setUpdatingState(orderId, 'paymentStatus', false);
+    }
+  };
+
 
   const handleDeleteOrder = async () => {
     if (!orderToDelete) return;
@@ -401,12 +433,8 @@ function AdminOrdersManagement() {
       
       const updatedOrders = allOrders.filter(o => o.id !== orderToDelete.id);
       setAllOrders(updatedOrders);
-      setFilteredOrders(
-        updatedOrders.filter(order =>
-          order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase()) || adminSearchTerm === ''
-        )
-      );
-      setOrderToDelete(null); // Close the dialog
+      // setFilteredOrders is updated via its useEffect
+      setOrderToDelete(null); 
     } catch (error) {
       console.error(`Error deleting order ${orderToDelete.formattedOrderId}:`, error);
       toast({ variant: "destructive", title: "Delete Error", description: `Could not delete order ${orderToDelete.formattedOrderId}.` });
@@ -452,7 +480,7 @@ function AdminOrdersManagement() {
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex-grow">
                   <CardTitle className="flex items-center"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
-                  <CardDescription>Review and update project order statuses.</CardDescription>
+                  <CardDescription>Review and update project order statuses and payment statuses.</CardDescription>
               </div>
               <div className="relative w-full sm:w-auto sm:max-w-xs">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -480,7 +508,8 @@ function AdminOrdersManagement() {
                     <TableHead>Order ID</TableHead>
                     <TableHead>Client Name</TableHead>
                     <TableHead>Project Name</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Order Status</TableHead>
+                    <TableHead>Payment Status</TableHead>
                     <TableHead>Created Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -492,6 +521,7 @@ function AdminOrdersManagement() {
                       <TableCell>{order.clientName}</TableCell>
                       <TableCell>{order.projectName}</TableCell>
                       <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                      <TableCell><PaymentStatusBadge status={order.paymentStatus} /></TableCell>
                       <TableCell>{formatDate(order.createdDate, 'PPp')}</TableCell>
                       <TableCell className="text-right space-x-1">
                         <Button asChild variant="outline" size="sm">
@@ -499,72 +529,95 @@ function AdminOrdersManagement() {
                             View <ExternalLink className="ml-1.5 h-3 w-3" />
                           </Link>
                         </Button>
-                        {!terminalStatuses.includes(order.status) && (
-                          <>
-                            {order.status === 'Pending' && (
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              disabled={getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus') || deletingOrderId === order.id}
+                            >
+                              {(getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus')) ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                               <span className="sr-only">Order Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {!terminalStatuses.includes(order.status) && order.status === 'Pending' && (
                               <>
-                                <Button 
-                                  size="sm" 
+                                <DropdownMenuItem
                                   onClick={() => handleUpdateStatus(order.id, "In Progress", order.formattedOrderId)}
-                                  disabled={updatingOrderId === order.id || deletingOrderId === order.id}
-                                  className="bg-green-500 hover:bg-green-600"
+                                  disabled={getUpdatingState(order.id, 'orderStatus') || deletingOrderId === order.id}
+                                  className="bg-green-500 hover:bg-green-600 text-white"
                                 >
-                                  {updatingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-1.5 h-4 w-4" />}
-                                  Confirm
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="destructive"
+                                  <CheckSquare className="mr-1.5 h-4 w-4" /> Confirm Order
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
                                   onClick={() => handleUpdateStatus(order.id, "Rejected", order.formattedOrderId)}
-                                  disabled={updatingOrderId === order.id || deletingOrderId === order.id}
-                                  className="bg-pink-700 hover:bg-pink-800"
+                                  disabled={getUpdatingState(order.id, 'orderStatus') || deletingOrderId === order.id}
+                                  className="bg-pink-700 hover:bg-pink-800 text-white"
                                 >
-                                  {updatingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-1.5 h-4 w-4" />}
-                                  Reject
-                                </Button>
+                                  <XCircle className="mr-1.5 h-4 w-4" /> Reject Order
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                               </>
                             )}
-                            {order.status !== 'Pending' && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm" disabled={updatingOrderId === order.id || deletingOrderId === order.id}>
-                                    {updatingOrderId === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
-                                     <span className="sr-only">Update Status</span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
+                            {!terminalStatuses.includes(order.status) && order.status !== 'Pending' && (
+                                <>
+                                 <DropdownMenuLabel>Change Order Status</DropdownMenuLabel>
                                   {availableActions
                                     .filter(action => action.newStatus !== order.status) 
                                     .filter(action => action.allowedCurrentStatuses?.includes(order.status) && action.newStatus !== "Rejected") 
                                     .map(action => (
                                     <DropdownMenuItem
-                                      key={action.newStatus}
+                                      key={`order-${action.newStatus}`}
                                       onClick={() => handleUpdateStatus(order.id, action.newStatus, order.formattedOrderId)}
-                                      disabled={updatingOrderId === order.id || deletingOrderId === order.id}
+                                      disabled={getUpdatingState(order.id, 'orderStatus') || deletingOrderId === order.id}
                                       className={action.className}
                                     >
                                       <action.icon className="mr-2 h-4 w-4" />
                                       {action.label}
                                     </DropdownMenuItem>
                                   ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                  <DropdownMenuSeparator />
+                                </>
                             )}
-                          </>
-                        )}
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setOrderToDelete(order)}
-                            disabled={updatingOrderId === order.id || deletingOrderId === order.id}
-                          >
-                            {deletingOrderId === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                            <span className="sr-only">Delete Order</span>
-                          </Button>
-                        </AlertDialogTrigger>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger 
+                                    disabled={getUpdatingState(order.id, 'paymentStatus') || deletingOrderId === order.id}
+                                >
+                                    <Banknote className="mr-2 h-4 w-4" /> Update Payment Status
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuLabel>Set Payment Status</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {PAYMENT_STATUSES.map(pStatus => (
+                                            <DropdownMenuItem 
+                                                key={pStatus}
+                                                onClick={() => handleUpdatePaymentStatus(order.id, pStatus, order.formattedOrderId)}
+                                                disabled={getUpdatingState(order.id, 'paymentStatus') || order.paymentStatus === pStatus}
+                                            >
+                                                {order.paymentStatus === pStatus && <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />}
+                                                {pStatus}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
+
+                            <DropdownMenuSeparator />
+                             <AlertDialogTrigger asChild>
+                               <DropdownMenuItem 
+                                 className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                                 onSelect={(e) => e.preventDefault()} // Prevents DropdownMenu from closing
+                                 onClick={() => setOrderToDelete(order)}
+                                 disabled={deletingOrderId === order.id || getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus')}
+                               >
+                                 <Trash2 className="mr-2 h-4 w-4" /> Delete Order
+                               </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -758,6 +811,4 @@ export default function AdminConsolePage() {
     </div>
   );
 }
-    
-
     

@@ -1,5 +1,5 @@
 
-import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SelectedFeatureInOrder, ProjectDetailsForm, SortableOrderKey, PackageOrderDetailsForm } from '@/types';
+import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SelectedFeatureInOrder, ProjectDetailsForm, SortableOrderKey, PackageOrderDetailsForm, PaymentStatus } from '@/types';
 import { format } from 'date-fns';
 import { collection, getDocs, doc, getDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
@@ -29,14 +29,10 @@ export async function fetchOrders(
     let queryDirectionToSort: 'asc' | 'desc' = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
     
 
-    // Firestore requires the first orderBy field to be the same as the field used in inequality filters (if any).
-    // Since we don't have inequality filters here currently, simple orderBy is fine.
-    // For descending sorts on potentially problematic fields (like Timestamps or mixed types), 
-    // querying ascending and reversing client-side is safer.
     let requiresClientSideReverse = false;
     if (firestoreSortKey === 'createdDate' && sortConfig.direction === 'descending') {
-      queryDirectionToSort = 'asc'; // Query ascending for dates
-      requiresClientSideReverse = true; // Then reverse on client
+      queryDirectionToSort = 'asc'; 
+      requiresClientSideReverse = true; 
     }
     
     const q = query(ordersCollectionRef, orderBy(firestoreSortKey, queryDirectionToSort));
@@ -53,6 +49,7 @@ export async function fetchOrders(
         projectName: data.projectName || 'N/A',
         projectType: data.projectType || 'Custom Build',
         status: data.status || 'Pending',
+        paymentStatus: data.paymentStatus || 'Not Paid', // Default to 'Not Paid'
         description: data.description || '',
         requestedFeatures: (Array.isArray(data.requestedFeatures) ? data.requestedFeatures : []) as SelectedFeatureInOrder[],
         createdDate: safeToISOString(data.createdDate, true)!, 
@@ -66,7 +63,7 @@ export async function fetchOrders(
         domain: data.domain || undefined,
         hostingDetails: data.hostingDetails || undefined,
         projectDetails: data.projectDetails as ProjectDetailsForm | undefined, 
-        packageOrderDetails: data.packageOrderDetails as PackageOrderDetailsForm | undefined, // Fetch package details
+        packageOrderDetails: data.packageOrderDetails as PackageOrderDetailsForm | undefined,
       } as Order;
     });
 
@@ -112,6 +109,7 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
         projectName: data.projectName || 'N/A',
         projectType: data.projectType || 'Custom Build',
         status: data.status || 'Pending',
+        paymentStatus: data.paymentStatus || 'Not Paid', // Default to 'Not Paid'
         description: data.description || '',
         requestedFeatures: (Array.isArray(data.requestedFeatures) ? data.requestedFeatures : []) as SelectedFeatureInOrder[],
         createdDate: safeToISOString(data.createdDate, true)!, 
@@ -125,7 +123,7 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
         domain: data.domain || undefined,
         hostingDetails: data.hostingDetails || undefined,
         projectDetails: data.projectDetails as ProjectDetailsForm | undefined,
-        packageOrderDetails: data.packageOrderDetails as PackageOrderDetailsForm | undefined, // Fetch package details
+        packageOrderDetails: data.packageOrderDetails as PackageOrderDetailsForm | undefined, 
       } as Order;
     } else {
       console.log("No such order document!");
@@ -148,6 +146,14 @@ export const ORDER_STATUSES: OrderStatus[] = [
   'Suspended',
   'Cancelled',
   'Rejected',
+];
+
+export const PAYMENT_STATUSES: PaymentStatus[] = [
+  'Not Paid', 
+  'Advanced Paid', 
+  'Half Paid', 
+  'Full Paid', 
+  'Verification Pending'
 ];
 
 export function formatDate(dateInput: string | number | Date | undefined | null, dateFormat: string = 'PPP'): string {

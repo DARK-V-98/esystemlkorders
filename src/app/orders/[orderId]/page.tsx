@@ -1,17 +1,17 @@
 
 import { fetchOrderById, formatDate } from "@/lib/data";
 import { OrderStatusBadge } from "@/components/order-status-badge";
+import { PaymentStatusBadge } from "@/components/payment-status-badge"; // Import new badge
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { 
     ArrowLeft, Briefcase, CheckSquare, Clock, DollarSign, FileText, FileType, Globe, Info, ListChecks, 
-    Mail, PaletteIcon, Server, Settings2, ShieldQuestion, Star, User, Users, Building, Package, Edit3, HelpCircle
+    Mail, PaletteIcon, Server, Settings2, ShieldQuestion, Star, User, Users, Building, Package, Edit3, HelpCircle,
+    Banknote, MessageSquare, ExternalLink as ExternalLinkIcon // Added Banknote, MessageSquare, ExternalLinkIcon
 } from "lucide-react"; 
 import { Separator } from "@/components/ui/separator";
-// Image component is no longer needed here
-// import Image from "next/image";
-import type { SelectedFeatureInOrder, ProjectDetailsForm, PackageOrderDetailsForm, Order, Price } from "@/types";
+import type { SelectedFeatureInOrder, ProjectDetailsForm, PackageOrderDetailsForm, Order, Price, PaymentStatus } from "@/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
@@ -57,7 +57,7 @@ const DetailRow = ({ label, value, isLink, isPreformatted, currencySymbol, curre
       <dd className="text-sm text-foreground md:col-span-2">
         {isLink && typeof value === 'string' && value.startsWith('http') ? (
           <a href={value} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline break-all">
-            {displayValue}
+            {displayValue} <ExternalLinkIcon className="inline-block ml-1 h-3 w-3" />
           </a>
         ) : isLink && typeof value === 'string' && !value.startsWith('http') && value.includes('@') ? ( 
            <a href={`mailto:${value}`} className="text-accent hover:underline break-all">
@@ -191,7 +191,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const isBudgetPackage = order.projectType === 'Budget Package';
 
   const getDefaultAccordionOpenValues = (order: Order) => {
-    const openValues = ['core-info'];
+    const openValues = ['core-info', 'payment-info']; // Open payment info by default
     if (isBudgetPackage) {
       if (!order.packageOrderDetails) openValues.push('fill-package-details-prompt');
       else openValues.push('package-order-details');
@@ -201,6 +201,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     }
     return openValues;
   };
+  
+  const whatsappPaymentLink = `https://wa.me/94765711396?text=Payment%20Receipt%20for%20Order%20ID%3A%20${encodeURIComponent(order.formattedOrderId)}`;
 
 
   return (
@@ -220,8 +222,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       </div>
 
       <Card className="shadow-xl overflow-hidden rounded-xl">
-        {/* Image banner section removed */}
-        <CardHeader className="border-b p-6 bg-card"> {/* Added bg-card for consistency if needed */}
+        <CardHeader className="border-b p-6 bg-card">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-y-4">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-primary">{order.projectName}</h2>
@@ -231,7 +232,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </div>
            <div className="mt-4 flex items-center gap-3">
               {isBudgetPackage ? <Package className="h-5 w-5 text-accent" /> : <Briefcase className="h-5 w-5 text-accent" /> }
-              <p className="font-medium text-md">{order.projectType}</p>
+              <p className="font-medium text-md mr-4">{order.projectType}</p>
+              <div className="flex items-center">
+                <Banknote className="h-5 w-5 text-accent mr-1.5" />
+                <PaymentStatusBadge status={order.paymentStatus} />
+              </div>
             </div>
         </CardHeader>
 
@@ -251,7 +256,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     label="Base Budget/Price" 
                     value={order.budget}
                     currencySymbol={order.currencySymbol}
-                    currency={order.selectedCurrency} // Pass currency if 'value' is a Price object, or for simple numbers
+                    currency={order.selectedCurrency}
                   />
                   {order.domain && <DetailRow label="Initial Domain" value={order.domain} isLink={!order.domain.startsWith('http') ? `http://${order.domain}`: order.domain} />}
                   {order.hostingDetails && <DetailRow label="Initial Hosting Details" value={order.hostingDetails} />}
@@ -276,6 +281,49 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     </div>
                     )}
                 </dl>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="payment-info">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
+                <div className="flex items-center"> <Banknote className="mr-2 h-5 w-5 text-primary" /> Payment Instructions & Status</div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-4 pt-2 space-y-4">
+                <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Current Payment Status:</p>
+                    <PaymentStatusBadge status={order.paymentStatus} />
+                </div>
+                <Separator />
+                <Card className="bg-muted/20 border-dashed">
+                    <CardHeader>
+                        <CardTitle className="text-lg text-primary">How to Make Payment</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        <p className="text-sm text-foreground">Please make your payment to the following bank account:</p>
+                        <div className="p-3 bg-background/50 rounded-md border text-sm">
+                            <p><strong>Bank Name:</strong> Example Bank PLC</p>
+                            <p><strong>Account Name:</strong> eSystemLK Gateway Solutions</p>
+                            <p><strong>Account Number:</strong> 123-456-7890</p>
+                            <p><strong>Branch:</strong> Main Branch, Colombo</p>
+                            <p><strong>SWIFT Code (BIC):</strong> EXMPLKLC (For international transfers)</p>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                IMPORTANT: Please replace the above with your actual bank details.
+                            </p>
+                        </div>
+                        <p className="text-sm text-foreground mt-3">
+                            After making the payment, please send a clear photo or screenshot of your payment receipt to our WhatsApp number.
+                            <strong>Ensure your Order ID ({order.formattedOrderId}) is mentioned in the message.</strong>
+                        </p>
+                         <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+                            <Link href={whatsappPaymentLink} target="_blank" rel="noopener noreferrer">
+                                <MessageSquare className="mr-2 h-4 w-4" /> Send Receipt via WhatsApp
+                            </Link>
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Your payment status will be updated once we verify your receipt. This may take some time.
+                        </p>
+                    </CardContent>
+                </Card>
               </AccordionContent>
             </AccordionItem>
             
@@ -510,4 +558,3 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     </div>
   );
 }
-

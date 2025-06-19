@@ -12,6 +12,13 @@ export type OrderStatus =
 
 export type ProjectType = 'New Website' | 'Redesign' | 'Feature Enhancement' | 'Maintenance' | 'Custom Build' | 'Budget Package';
 
+export type PaymentStatus = 
+  | 'Not Paid' 
+  | 'Advanced Paid' 
+  | 'Half Paid' 
+  | 'Full Paid' 
+  | 'Verification Pending';
+
 export interface CustomerDetailsForm {
   name: string;
   email: string;
@@ -105,16 +112,12 @@ export interface ProjectDetailsForm {
   agreeToShareContent: boolean;
 }
 
-// Reverted PackageOrderDetailsForm to simpler structure
 export interface PackageOrderDetailsForm {
-  // Basic Info
   fullName: string;
   nicNumber: string;
   email: string;
   phone: string;
   address: string;
-
-  // Website Setup
   websiteName: string;
   needsWebsiteSetupAssistance: 'Yes' | 'No';
   hasDomain: 'Yes' | 'No';
@@ -123,15 +126,11 @@ export interface PackageOrderDetailsForm {
   hostingProvider?: string;
   needsBusinessEmail: 'Yes' | 'No';
   businessEmailCount?: number;
-
-  // Design Preferences
   baseColors: string;
   style: 'Modern' | 'Minimal' | 'Classic' | 'Playful' | 'Elegant' | 'Techy' | 'Bohemian' | 'Artistic' | 'Other';
   styleOther?: string;
   inspirationSites?: string;
   fontAndLogoIdeas?: string;
-
-  // Features Needed (booleans for form control)
   featureOnlineOrdering?: boolean;
   featureOnlinePayments?: boolean;
   featureContactForm?: boolean;
@@ -143,13 +142,8 @@ export interface PackageOrderDetailsForm {
   featureFileDownloads?: boolean;
   featureChatSupport?: boolean;
   otherFeatures?: string;
-  
-  budgetRange: string; // User input for budget
-
-  // Notes
+  budgetRange: string;
   businessGoalsSpecialNeeds?: string;
-
-  // Consent
   confirmDetailsCorrect: boolean;
   agreeToShareMaterials: boolean;
 }
@@ -167,15 +161,16 @@ export interface Order {
   deadline?: string; 
   createdDate: string; 
   contactEmail: string;
-  budget: number; // Base price of the package (in LKR for package orders)
+  budget: number; 
   numberOfPages: number;
-  selectedCurrency: Currency; // Currency of the base package price
-  currencySymbol: string; // Symbol of the base package price currency
+  selectedCurrency: Currency; 
+  currencySymbol: string; 
   userEmail: string;
   domain?: string;
   hostingDetails?: string;
   projectDetails?: ProjectDetailsForm; 
   packageOrderDetails?: PackageOrderDetailsForm; 
+  paymentStatus?: PaymentStatus; // New field for payment status
 }
 
 export interface OrderFilters {
@@ -195,7 +190,8 @@ export type SortableOrderKey =
   | 'contactEmail'
   | 'budget'
   | 'numberOfPages'
-  | 'userEmail';
+  | 'userEmail'
+  | 'paymentStatus'; // Added for sorting
 
 export interface SortConfig {
   key: SortableOrderKey | null; 
