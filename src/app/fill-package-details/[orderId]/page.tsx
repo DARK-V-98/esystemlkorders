@@ -142,11 +142,11 @@ export default function FillPackageDetailsPage() {
   const { control, handleSubmit, register, watch, setValue, formState: { errors } } = useForm<PackageOrderDetailsForm>({
     resolver: zodResolver(packageDetailsSchema),
     defaultValues: {
-      needsWebsiteSetupAssistance: undefined,
-      hasDomain: undefined,
-      hasHosting: undefined,
-      needsBusinessEmail: undefined,
-      style: undefined,
+      needsWebsiteSetupAssistance: "", // Changed from undefined
+      hasDomain: "", // Changed from undefined
+      hasHosting: "", // Changed from undefined
+      needsBusinessEmail: "", // Changed from undefined
+      style: undefined, // Select can handle undefined for placeholder
       businessEmailCount: 0,
       confirmDetailsCorrect: false,
       agreeToShareMaterials: false,
@@ -160,17 +160,16 @@ export default function FillPackageDetailsPage() {
       featureBlog: false,
       featureFileDownloads: false,
       featureChatSupport: false,
-      budgetRange: "", // Initialize for display
+      budgetRange: "", 
     },
   });
 
-  const watchedFeatures = watch(ADDON_FEATURES_CONFIG.map(f => f.id)); // Watch all feature checkboxes
+  const watchedFeatures = watch(ADDON_FEATURES_CONFIG.map(f => f.id)); 
 
   useEffect(() => {
     if (!orderData) return;
 
-    const baseLKR = orderData.budget; // Assuming orderData.budget is base LKR price
-     // Estimate USD base price (e.g. 300 LKR ~ 1 USD, adjust as needed)
+    const baseLKR = orderData.budget; 
     const baseUSD = Math.round(baseLKR / 300); 
     setBasePackagePrice({ lkr: baseLKR, usd: baseUSD });
 
@@ -179,7 +178,7 @@ export default function FillPackageDetailsPage() {
 
     ADDON_FEATURES_CONFIG.forEach(featureConfig => {
       const featureKey = featureConfig.id;
-      if (watch(featureKey)) { // Access watched value directly
+      if (watch(featureKey)) { 
         currentAddonsTotalLKR += featureConfig.price.lkr;
         currentAddonsTotalUSD += featureConfig.price.usd;
       }
@@ -190,7 +189,6 @@ export default function FillPackageDetailsPage() {
     const finalUSD = baseUSD + currentAddonsTotalUSD;
     setFinalCalculatedPrice({ lkr: finalLKR, usd: finalUSD });
     
-    // Update the budgetRange display field
     setValue('budgetRange', `${currencySymbol}${ (selectedCurrency === 'lkr' ? finalLKR : finalUSD).toLocaleString() } ${selectedCurrency.toUpperCase()}`);
 
   }, [watchedFeatures, orderData, selectedCurrency, currencySymbol, watch, setValue]);
@@ -218,9 +216,9 @@ export default function FillPackageDetailsPage() {
           setOrderData(fetchedOrder);
           
           const baseLKR = fetchedOrder.budget;
-          const baseUSD = Math.round(baseLKR / 300); // Adjust conversion factor if needed
+          const baseUSD = Math.round(baseLKR / 300); 
           setBasePackagePrice({ lkr: baseLKR, usd: baseUSD });
-          setFinalCalculatedPrice({ lkr: baseLKR, usd: baseUSD }); // Initial final price before add-ons
+          setFinalCalculatedPrice({ lkr: baseLKR, usd: baseUSD }); 
           setValue('budgetRange', `${fetchedOrder.currencySymbol}${fetchedOrder.budget.toLocaleString()} ${fetchedOrder.selectedCurrency.toUpperCase()}`);
 
 
@@ -262,7 +260,7 @@ export default function FillPackageDetailsPage() {
         id: addon.id,
         name: addon.name,
         priceAtSubmission: addon.price,
-        selectedCurrency: selectedCurrency, // Capture currency context at submission
+        selectedCurrency: selectedCurrency, 
       }));
 
     try {
@@ -272,7 +270,7 @@ export default function FillPackageDetailsPage() {
         selectedAddons: selectedAddonsData,
         addonsTotalPrice: addonsTotalPrice,
         finalCalculatedPrice: finalCalculatedPrice,
-        budgetRange: `${currencySymbol}${finalCalculatedPrice[selectedCurrency].toLocaleString()} ${selectedCurrency.toUpperCase()}`, // Save displayed string
+        budgetRange: `${currencySymbol}${finalCalculatedPrice[selectedCurrency].toLocaleString()} ${selectedCurrency.toUpperCase()}`, 
         lastUpdated: serverTimestamp(),
       };
 
@@ -439,7 +437,6 @@ export default function FillPackageDetailsPage() {
                 <span>Estimated Final Total ({selectedCurrency.toUpperCase()}):</span>
                 <span>{currencySymbol}{finalCalculatedPrice[selectedCurrency].toLocaleString()}</span>
              </div>
-             {/* This input is now for display only, updated by useEffect */}
             <Input id="budgetRange" {...register("budgetRange")} readOnly className="mt-1 bg-muted/50 text-center font-semibold" />
             <p className="text-xs text-muted-foreground text-center">This is an estimate. Final pricing will be confirmed.</p>
              <p className="text-destructive text-xs mt-1">{errors.budgetRange?.message}</p>
