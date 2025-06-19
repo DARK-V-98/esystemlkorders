@@ -15,7 +15,7 @@ import {
   MoreVertical, PauseCircle, PlayCircle, Trash2, Mail 
 } from "lucide-react";
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc, Timestamp, query, orderBy as firestoreOrderBy } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc, Timestamp, query, orderBy as firestoreOrderBy, deleteDoc } from 'firebase/firestore';
 import { DEFAULT_FEATURE_CATEGORIES, DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
 import { DynamicIcon } from '@/components/icons';
 import type { Order, OrderStatus } from '@/types';
@@ -31,6 +31,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { sendOrderStatusUpdateEmail } from '@/ai/flows/send-order-status-email-flow';
 
 
@@ -256,7 +267,9 @@ function AdminOrdersManagement() {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
   const [adminSearchTerm, setAdminSearchTerm] = useState('');
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const { toast } = useToast();
 
   const fetchAdminOrders = async () => {
@@ -379,6 +392,30 @@ function AdminOrdersManagement() {
     }
   };
 
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    setDeletingOrderId(orderToDelete.id);
+    try {
+      await deleteDoc(doc(db, ORDERS_COLLECTION, orderToDelete.id));
+      toast({ title: "Order Deleted", description: `Order ${orderToDelete.formattedOrderId} has been successfully deleted.` });
+      
+      const updatedOrders = allOrders.filter(o => o.id !== orderToDelete.id);
+      setAllOrders(updatedOrders);
+      setFilteredOrders(
+        updatedOrders.filter(order =>
+          order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase()) || adminSearchTerm === ''
+        )
+      );
+      setOrderToDelete(null); // Close the dialog
+    } catch (error) {
+      console.error(`Error deleting order ${orderToDelete.formattedOrderId}:`, error);
+      toast({ variant: "destructive", title: "Delete Error", description: `Could not delete order ${orderToDelete.formattedOrderId}.` });
+    } finally {
+      setDeletingOrderId(null);
+    }
+  };
+
+
   const availableActions: Array<{
     label: string;
     newStatus: OrderStatus;
@@ -409,122 +446,157 @@ function AdminOrdersManagement() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex-grow">
-                <CardTitle className="flex items-center"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
-                <CardDescription>Review and update project order statuses.</CardDescription>
-            </div>
-            <div className="relative w-full sm:w-auto sm:max-w-xs">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                type="search"
-                placeholder="Search by Order ID..."
-                value={adminSearchTerm}
-                onChange={(e) => setAdminSearchTerm(e.target.value)}
-                className="pl-8 w-full"
-                aria-label="Search orders by ID"
-                />
-            </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {filteredOrders.length === 0 ? (
-          <p className="text-muted-foreground text-center py-4">
-            {adminSearchTerm ? `No orders found matching "${adminSearchTerm}".` : "No orders found."}
-            </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Client Name</TableHead>
-                  <TableHead>Project Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.formattedOrderId}</TableCell>
-                    <TableCell>{order.clientName}</TableCell>
-                    <TableCell>{order.projectName}</TableCell>
-                    <TableCell><OrderStatusBadge status={order.status} /></TableCell>
-                    <TableCell>{formatDate(order.createdDate, 'PPp')}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/orders/${order.id}`}>
-                          View <ExternalLink className="ml-1.5 h-3 w-3" />
-                        </Link>
-                      </Button>
-                      {!terminalStatuses.includes(order.status) && (
-                        <>
-                          {order.status === 'Pending' && (
-                            <>
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleUpdateStatus(order.id, "In Progress", order.formattedOrderId)}
-                                disabled={updatingOrderId === order.id}
-                                className="bg-green-500 hover:bg-green-600"
-                              >
-                                {updatingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-1.5 h-4 w-4" />}
-                                Confirm
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => handleUpdateStatus(order.id, "Rejected", order.formattedOrderId)}
-                                disabled={updatingOrderId === order.id}
-                                className="bg-pink-700 hover:bg-pink-800"
-                              >
-                                {updatingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-1.5 h-4 w-4" />}
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          {order.status !== 'Pending' && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" disabled={updatingOrderId === order.id}>
-                                  {updatingOrderId === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
-                                   <span className="sr-only">Update Status</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {availableActions
-                                  .filter(action => action.newStatus !== order.status) 
-                                  .filter(action => action.allowedCurrentStatuses?.includes(order.status) && action.newStatus !== "Rejected") 
-                                  .map(action => (
-                                  <DropdownMenuItem
-                                    key={action.newStatus}
-                                    onClick={() => handleUpdateStatus(order.id, action.newStatus, order.formattedOrderId)}
-                                    disabled={updatingOrderId === order.id}
-                                    className={action.className}
-                                  >
-                                    <action.icon className="mr-2 h-4 w-4" />
-                                    {action.label}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+    <AlertDialog>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex-grow">
+                  <CardTitle className="flex items-center"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
+                  <CardDescription>Review and update project order statuses.</CardDescription>
+              </div>
+              <div className="relative w-full sm:w-auto sm:max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                  type="search"
+                  placeholder="Search by Order ID..."
+                  value={adminSearchTerm}
+                  onChange={(e) => setAdminSearchTerm(e.target.value)}
+                  className="pl-8 w-full"
+                  aria-label="Search orders by ID"
+                  />
+              </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          {filteredOrders.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">
+              {adminSearchTerm ? `No orders found matching "${adminSearchTerm}".` : "No orders found."}
+              </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Client Name</TableHead>
+                    <TableHead>Project Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.formattedOrderId}</TableCell>
+                      <TableCell>{order.clientName}</TableCell>
+                      <TableCell>{order.projectName}</TableCell>
+                      <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                      <TableCell>{formatDate(order.createdDate, 'PPp')}</TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/orders/${order.id}`}>
+                            View <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Link>
+                        </Button>
+                        {!terminalStatuses.includes(order.status) && (
+                          <>
+                            {order.status === 'Pending' && (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleUpdateStatus(order.id, "In Progress", order.formattedOrderId)}
+                                  disabled={updatingOrderId === order.id || deletingOrderId === order.id}
+                                  className="bg-green-500 hover:bg-green-600"
+                                >
+                                  {updatingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-1.5 h-4 w-4" />}
+                                  Confirm
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => handleUpdateStatus(order.id, "Rejected", order.formattedOrderId)}
+                                  disabled={updatingOrderId === order.id || deletingOrderId === order.id}
+                                  className="bg-pink-700 hover:bg-pink-800"
+                                >
+                                  {updatingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-1.5 h-4 w-4" />}
+                                  Reject
+                                </Button>
+                              </>
+                            )}
+                            {order.status !== 'Pending' && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm" disabled={updatingOrderId === order.id || deletingOrderId === order.id}>
+                                    {updatingOrderId === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                                     <span className="sr-only">Update Status</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {availableActions
+                                    .filter(action => action.newStatus !== order.status) 
+                                    .filter(action => action.allowedCurrentStatuses?.includes(order.status) && action.newStatus !== "Rejected") 
+                                    .map(action => (
+                                    <DropdownMenuItem
+                                      key={action.newStatus}
+                                      onClick={() => handleUpdateStatus(order.id, action.newStatus, order.formattedOrderId)}
+                                      disabled={updatingOrderId === order.id || deletingOrderId === order.id}
+                                      className={action.className}
+                                    >
+                                      <action.icon className="mr-2 h-4 w-4" />
+                                      {action.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </>
+                        )}
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setOrderToDelete(order)}
+                            disabled={updatingOrderId === order.id || deletingOrderId === order.id}
+                          >
+                            {deletingOrderId === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            <span className="sr-only">Delete Order</span>
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      {orderToDelete && (
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the order for
+              <span className="font-semibold"> {orderToDelete.projectName} (ID: {orderToDelete.formattedOrderId})</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOrderToDelete(null)} disabled={!!deletingOrderId}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteOrder} 
+              disabled={!!deletingOrderId}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletingOrderId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Delete Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      )}
+    </AlertDialog>
   );
 }
 
@@ -686,6 +758,6 @@ export default function AdminConsolePage() {
     </div>
   );
 }
-
+    
 
     
