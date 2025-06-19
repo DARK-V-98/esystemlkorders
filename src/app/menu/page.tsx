@@ -1,58 +1,75 @@
 
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered, Palette, ExternalLink } from "lucide-react"; 
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
+import type { AuthUser } from "@/types";
 
 interface MenuItem {
   title: string;
   description: string;
   icon: React.ElementType;
   href: string;
+  allowedRoles?: Array<AuthUser['role']>;
 }
 
-const menuItems: MenuItem[] = [
+const menuItemsList: MenuItem[] = [
   {
     title: "Manage Orders",
     description: "View and manage client project orders.",
     icon: ListOrdered,
     href: "/", 
+    allowedRoles: ['user', 'developer', 'admin'],
   },
   {
     title: "Packages",
     description: "View and manage existing service packages.",
     icon: Package,
     href: "/packages", 
+    allowedRoles: ['user', 'developer', 'admin'],
   },
   {
     title: "Make Custom Website",
     description: "Design and order a unique website.",
     icon: Palette, 
     href: "/custom-website", 
+    allowedRoles: ['user', 'developer', 'admin'],
   },
   {
     title: "Custom Pack",
     description: "Configure a custom package for a client.",
     icon: Settings,
     href: "/custom-pack", 
+    allowedRoles: ['developer', 'admin'],
   },
   {
     title: "VIP Features",
     description: "Access exclusive VIP services and features.",
     icon: Gem,
     href: "/vip", 
+    allowedRoles: ['developer', 'admin'],
   },
   {
     title: "Admin Console",
-    description: "Manage application settings and users (Admin only).",
+    description: "Manage application settings and users.",
     icon: ShieldCheck,
     href: "/admin", 
+    allowedRoles: ['developer', 'admin'],
   },
 ];
 
 export default function MenuPage() {
-  const visibleMenuItems = menuItems;
+  const { user } = useAuth();
+
+  const visibleMenuItems = menuItemsList.filter(item => {
+    if (!item.allowedRoles) return true; 
+    if (!user || !user.role) return false; 
+    return item.allowedRoles.includes(user.role);
+  });
 
 
   return (
