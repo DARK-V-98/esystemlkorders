@@ -4,14 +4,14 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeft, Menu } from "lucide-react" // Added Menu icon
+import { PanelLeft, Menu } from "lucide-react" 
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet" // Added SheetTitle
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -207,6 +207,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
@@ -273,10 +274,10 @@ const SidebarTrigger = React.forwardRef<
       variant="ghost"
       size="icon"
       className={cn(
-        isMobile ? "h-9 w-9" : "h-7 w-7", // Increased size for mobile
-        "md:hidden", // Hide on md and up by default if sidebar is present
-        "group-data-[variant=inset]/sidebar-wrapper:md:flex", // Show for inset variant on desktop
-        "group-data-[variant=floating]/sidebar-wrapper:md:flex", // Show for floating variant on desktop
+        isMobile ? "h-9 w-9" : "h-7 w-7", 
+        "md:hidden", 
+        "group-data-[variant=inset]/sidebar-wrapper:md:flex", 
+        "group-data-[variant=floating]/sidebar-wrapper:md:flex", 
         className
       )}
       onClick={(event) => {
@@ -768,4 +769,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
