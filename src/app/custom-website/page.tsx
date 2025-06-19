@@ -233,6 +233,7 @@ export default function MakeCustomWebsitePage() {
       projectName: customerDetails.projectName,
       projectType: 'Custom Build',
       status: 'Pending',
+      paymentStatus: 'Not Paid',
       description: customerDetails.projectDescription,
       requestedFeatures: selectedFeatureDetails,
       contactEmail: customerDetails.email,
@@ -293,12 +294,12 @@ export default function MakeCustomWebsitePage() {
         <div className="flex flex-col md:flex-row justify-between md:items-start gap-6 mb-6">
           <header className="flex-grow text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start space-x-3 mb-2">
-              <DynamicIcon name="Palette" className="h-10 w-10 text-primary" />
-              <h1 className="text-4xl font-bold font-headline text-primary">
+              <DynamicIcon name="Palette" className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+              <h1 className="text-3xl md:text-4xl font-bold font-headline text-primary">
                 Build Your Custom Website
               </h1>
             </div>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-md sm:text-lg text-muted-foreground">
               Select the features you need and get an instant price estimate in {selectedCurrency.toUpperCase()}.
             </p>
           </header>
@@ -320,9 +321,9 @@ export default function MakeCustomWebsitePage() {
             <CardHeader className="bg-primary/5">
               <div className="flex items-center space-x-3">
                 <DynamicIcon name="Briefcase" className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Your Project Details</CardTitle>
+                <CardTitle className="text-xl md:text-2xl">Your Project Details</CardTitle>
               </div>
-              <CardDescription>Tell us about your project and how to reach you.</CardDescription>
+              <CardDescription className="text-sm md:text-base">Tell us about your project and how to reach you.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -405,18 +406,18 @@ export default function MakeCustomWebsitePage() {
             <CardHeader className="bg-primary/5">
                <div className="flex items-center space-x-3">
                   <DynamicIcon name="Settings" className="h-6 w-6 text-primary" />
-                  <CardTitle className="text-2xl">Select Features</CardTitle>
+                  <CardTitle className="text-xl md:text-2xl">Select Features</CardTitle>
               </div>
-              <CardDescription>Choose the components and services for your website.</CardDescription>
+              <CardDescription className="text-sm md:text-base">Choose the components and services for your website.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <Accordion type="multiple" defaultValue={featureCategories.map(cat => cat.id)} className="w-full">
                 {featureCategories.map((category) => (
                   <AccordionItem value={category.id} key={category.id} className="border-b last:border-b-0">
-                    <AccordionTrigger className="px-6 py-4 hover:bg-muted/50 transition-colors" disabled={isSubmitting}>
+                    <AccordionTrigger className="px-6 py-4 hover:bg-muted/50 transition-colors text-md md:text-lg" disabled={isSubmitting}>
                       <div className="flex items-center space-x-3">
                         <DynamicIcon name={category.iconName} className="h-5 w-5 text-primary" />
-                        <span className="text-lg font-medium">{category.name}</span>
+                        <span className="font-medium">{category.name}</span>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-2 sm:px-4 md:px-6 py-4 bg-background">
@@ -462,11 +463,11 @@ export default function MakeCustomWebsitePage() {
             <CardHeader>
               <div className="flex items-center space-x-3">
                   <DynamicIcon name="DollarSign" className="h-6 w-6 text-primary" />
-                  <CardTitle className="text-2xl">Estimated Total ({selectedCurrency.toUpperCase()})</CardTitle>
+                  <CardTitle className="text-xl md:text-2xl">Estimated Total ({selectedCurrency.toUpperCase()})</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-5xl font-bold text-primary mb-2">
+              <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
                 {currencySymbol}{totalPrice.toLocaleString()}
               </p>
               <p className="text-sm text-muted-foreground">
@@ -474,7 +475,7 @@ export default function MakeCustomWebsitePage() {
               </p>
             </CardContent>
             <CardFooter className="flex justify-end p-6 bg-muted/30">
-              <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6" disabled={isSubmitting}>
+              <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base md:text-lg px-6 md:px-8 py-3 md:py-6" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                 Submit Request & Proceed to Details
               </Button>
@@ -485,4 +486,3 @@ export default function MakeCustomWebsitePage() {
     </div>
   );
 }
-

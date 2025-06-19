@@ -22,7 +22,7 @@ interface OrderDetailPageProps {
 }
 
 const SectionTitle = ({ icon: Icon, title }: { icon: React.ElementType, title: string }) => (
-  <div className="flex items-center text-xl font-semibold text-primary mb-3">
+  <div className="flex items-center text-lg md:text-xl font-semibold text-primary mb-3">
     <Icon className="mr-2 h-5 w-5" /> {title}
   </div>
 );
@@ -167,7 +167,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       <div className="container mx-auto p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
         <Card className="w-full max-w-md text-center shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl font-headline">Order Not Found</CardTitle>
+            <CardTitle className="text-xl md:text-2xl font-headline">Order Not Found</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
@@ -209,10 +209,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8 font-body">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline text-primary">
+          <h1 className="text-2xl md:text-3xl font-bold font-headline text-primary">
             Order Details
           </h1>
-          <p className="text-muted-foreground">ID: {order.formattedOrderId}</p>
+          <p className="text-sm md:text-base text-muted-foreground">ID: {order.formattedOrderId}</p>
         </div>
         <Button asChild variant="outline">
           <Link href="/">
@@ -222,19 +222,21 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       </div>
 
       <Card className="shadow-xl overflow-hidden rounded-xl">
-        <CardHeader className="border-b p-6 bg-card">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-y-4">
+        <CardHeader className="border-b p-4 md:p-6 bg-card">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-y-2 sm:gap-y-4">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-primary">{order.projectName}</h2>
-              <p className="text-muted-foreground mt-1">Client: {order.clientName}</p>
+              <h2 className="text-xl md:text-2xl font-bold text-primary">{order.projectName}</h2>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">Client: {order.clientName}</p>
             </div>
             <OrderStatusBadge status={order.status} />
           </div>
-           <div className="mt-4 flex items-center gap-3">
-              {isBudgetPackage ? <Package className="h-5 w-5 text-accent" /> : <Briefcase className="h-5 w-5 text-accent" /> }
-              <p className="font-medium text-md mr-4">{order.projectType}</p>
+           <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
               <div className="flex items-center">
-                <Banknote className="h-5 w-5 text-accent mr-1.5" />
+                {isBudgetPackage ? <Package className="h-4 w-4 sm:h-5 sm:w-5 text-accent mr-1.5" /> : <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-accent mr-1.5" /> }
+                <p className="font-medium text-sm sm:text-md">{order.projectType}</p>
+              </div>
+              <div className="flex items-center">
+                <Banknote className="h-4 w-4 sm:h-5 sm:w-5 text-accent mr-1.5" />
                 <PaymentStatusBadge status={order.paymentStatus} />
               </div>
             </div>
@@ -243,10 +245,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         <CardContent className="p-0">
           <Accordion type="multiple" defaultValue={getDefaultAccordionOpenValues(order)} className="w-full">
             <AccordionItem value="core-info">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
+              <AccordionTrigger className="text-md md:text-lg font-semibold hover:no-underline px-4 md:px-6 py-3 md:py-4">
                 <div className="flex items-center"> <Info className="mr-2 h-5 w-5 text-primary" /> Core Order Information</div>
               </AccordionTrigger>
-              <AccordionContent className="px-6 pb-4 pt-2">
+              <AccordionContent className="px-4 md:px-6 pb-4 pt-2">
                 <dl className="divide-y divide-border">
                   <DetailRow label="Initial Project Description" value={order.description || "No description provided."} isPreformatted/>
                   <DetailRow label="Created Date" value={formatDate(order.createdDate, 'PPpp')} />
@@ -285,36 +287,32 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </AccordionItem>
 
             <AccordionItem value="payment-info">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
+              <AccordionTrigger className="text-md md:text-lg font-semibold hover:no-underline px-4 md:px-6 py-3 md:py-4">
                 <div className="flex items-center"> <Banknote className="mr-2 h-5 w-5 text-primary" /> Payment Instructions & Status</div>
               </AccordionTrigger>
-              <AccordionContent className="px-6 pb-4 pt-2 space-y-4">
+              <AccordionContent className="px-4 md:px-6 pb-4 pt-2 space-y-4">
                 <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Current Payment Status:</p>
                     <PaymentStatusBadge status={order.paymentStatus} />
                 </div>
                 <Separator />
                 <Card className="bg-muted/20 border-dashed">
-                    <CardHeader>
-                        <CardTitle className="text-lg text-primary">How to Make Payment</CardTitle>
+                    <CardHeader className="p-4 md:p-5">
+                        <CardTitle className="text-md md:text-lg text-primary">How to Make Payment</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="p-4 md:p-5 space-y-3">
                         <p className="text-sm text-foreground">Please make your payment to the following bank account:</p>
                         <div className="p-3 bg-background/50 rounded-md border text-sm">
                             <p><strong>Bank Name:</strong> People’s bank</p>
                             <p><strong>Account Name:</strong> thimira vishwa vidarshana</p>
                             <p><strong>Account Number:</strong> 174-2-001-0-0023985</p>
                             <p><strong>Branch:</strong> Nugegoda Branch</p>
-                            {/* <p><strong>SWIFT Code (BIC):</strong> EXMPLKLC (For international transfers)</p> */}
-                            {/* <p className="mt-2 text-xs text-muted-foreground">
-                                IMPORTANT: Please replace the above with your actual bank details.
-                            </p> */}
                         </div>
                         <p className="text-sm text-foreground mt-3">
                             After making the payment, please send a clear photo or screenshot of your payment receipt to our WhatsApp number.
                             <strong>Ensure your Order ID ({order.formattedOrderId}) is mentioned in the message.</strong>
                         </p>
-                         <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+                         <Button asChild className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
                             <Link href={whatsappPaymentLink} target="_blank" rel="noopener noreferrer">
                                 <MessageSquare className="mr-2 h-4 w-4" /> Send Receipt via WhatsApp
                             </Link>
@@ -329,10 +327,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             
             {!isBudgetPackage && pd && (
             <AccordionItem value="project-details">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
+              <AccordionTrigger className="text-md md:text-lg font-semibold hover:no-underline px-4 md:px-6 py-3 md:py-4">
                 <div className="flex items-center"> <FileText className="mr-2 h-5 w-5 text-primary" /> Detailed Project Specifications</div>
               </AccordionTrigger>
-              <AccordionContent className="px-6 pb-4 pt-2 space-y-6">
+              <AccordionContent className="px-4 md:px-6 pb-4 pt-2 space-y-6">
                 <Card className="border-none shadow-none bg-transparent">
                   <CardHeader className="px-0 pt-0"><SectionTitle icon={User} title="Client & Personal Information" /></CardHeader>
                   <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
@@ -441,9 +439,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             )}
             {!isBudgetPackage && !pd && (
               <AccordionItem value="fill-project-details-prompt" className="border-t">
-                <AccordionContent className="px-6 py-4 bg-muted/20">
+                <AccordionContent className="px-4 md:px-6 py-4 bg-muted/20">
                     <div className="text-center text-muted-foreground">
-                        <p className="mb-3 text-base">No detailed project specifications have been submitted for this order yet.</p>
+                        <p className="mb-3 text-sm md:text-base">No detailed project specifications have been submitted for this order yet.</p>
                         <Button asChild variant="default" className="bg-accent hover:bg-accent/90 text-accent-foreground">
                             <Link href={`/fill-project-details/${order.id}`}>
                                 <Edit3 className="mr-2 h-4 w-4" /> Click here to fill out the Project Details Form
@@ -456,10 +454,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
             {isBudgetPackage && pkgDetails && (
               <AccordionItem value="package-order-details">
-                <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
+                <AccordionTrigger className="text-md md:text-lg font-semibold hover:no-underline px-4 md:px-6 py-3 md:py-4">
                   <div className="flex items-center"> <Package className="mr-2 h-5 w-5 text-primary" /> Package Order Specifications</div>
                 </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4 pt-2 space-y-6">
+                <AccordionContent className="px-4 md:px-6 pb-4 pt-2 space-y-6">
                   <Card className="border-none shadow-none bg-transparent">
                     <CardHeader className="px-0 pt-0"><SectionTitle icon={User} title="Basic Info" /></CardHeader>
                     <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
@@ -530,9 +528,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             )}
             {isBudgetPackage && !pkgDetails && (
               <AccordionItem value="fill-package-details-prompt" className="border-t">
-                <AccordionContent className="px-6 py-4 bg-muted/20">
+                <AccordionContent className="px-4 md:px-6 py-4 bg-muted/20">
                     <div className="text-center text-muted-foreground">
-                        <p className="mb-3 text-base">No specific details have been submitted for this package order yet.</p>
+                        <p className="mb-3 text-sm md:text-base">No specific details have been submitted for this package order yet.</p>
                         <Button asChild variant="default" className="bg-accent hover:bg-accent/90 text-accent-foreground">
                             <Link href={`/fill-package-details/${order.id}`}>
                                 <Edit3 className="mr-2 h-4 w-4" /> Click here to fill out the Package Details Form
@@ -546,7 +544,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </Accordion>
         </CardContent>
 
-        <CardFooter className="bg-muted/50 p-6 flex flex-col sm:flex-row justify-between items-center gap-3 border-t">
+        <CardFooter className="bg-muted/50 p-4 md:p-6 flex flex-col sm:flex-row justify-between items-center gap-3 border-t">
            <p className="text-xs text-muted-foreground">Order ID: {order.formattedOrderId}</p>
            <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto" asChild>
               <a href={`mailto:${order.contactEmail}`}>
@@ -558,4 +556,3 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     </div>
   );
 }
-

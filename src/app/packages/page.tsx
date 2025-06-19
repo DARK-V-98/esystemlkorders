@@ -280,15 +280,15 @@ export default function PackagesPage() {
       <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         <header className="text-center mb-12">
           <div className="flex items-center justify-center space-x-3 mb-3">
-            <Layers className="h-12 w-12 text-primary" />
-            <h1 className="text-4xl font-bold font-headline text-primary">
+            <Layers className="h-10 w-10 md:h-12 md:w-12 text-primary" />
+            <h1 className="text-3xl md:text-4xl font-bold font-headline text-primary">
               Our Service Packages
             </h1>
           </div>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="text-md sm:text-lg text-muted-foreground max-w-2xl mx-auto">
             Choose from our expertly crafted packages or build your own custom solution to perfectly fit your needs.
           </p>
-          <p className="text-muted-foreground text-md max-w-2xl mx-auto mt-2">
+          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto mt-2">
             All of these packages include many more features. Contact eSystemLK for full details.
           </p>
         </header>
@@ -302,13 +302,13 @@ export default function PackagesPage() {
               <CardHeader className="bg-card p-6">
                 <div className="flex items-center space-x-3 mb-2">
                   <DynamicIcon name={pkg.iconName} className={`h-8 w-8 ${pkg.highlight ? 'text-primary' : 'text-accent'}`} />
-                  <CardTitle className={`text-2xl font-semibold ${pkg.highlight ? 'text-primary' : ''}`}>{pkg.title}</CardTitle>
+                  <CardTitle className={`text-xl md:text-2xl font-semibold ${pkg.highlight ? 'text-primary' : ''}`}>{pkg.title}</CardTitle>
                 </div>
                 <CardDescription className="text-sm text-muted-foreground min-h-[60px]">{pkg.description}</CardDescription>
               </CardHeader>
               <CardContent className="p-6 flex-grow space-y-4">
                 <div>
-                  <p className={`text-4xl font-bold ${pkg.highlight ? 'text-primary' : 'text-foreground'}`}>{pkg.priceDisplay}</p>
+                  <p className={`text-3xl md:text-4xl font-bold ${pkg.highlight ? 'text-primary' : 'text-foreground'}`}>{pkg.priceDisplay}</p>
                   {pkg.id !== 'custom-package' && <p className="text-xs text-muted-foreground">LKR / one-time</p>}
                 </div>
                 <ul className="space-y-2 text-sm text-muted-foreground">
@@ -322,7 +322,7 @@ export default function PackagesPage() {
               </CardContent>
               <CardFooter className="p-6 bg-muted/20 mt-auto">
                 {pkg.isCustom ? (
-                  <Button asChild className={`w-full text-lg py-6 ${pkg.highlight ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-accent hover:bg-accent/80 text-accent-foreground'}`}>
+                  <Button asChild className={`w-full text-base md:text-lg py-3 md:py-6 ${pkg.highlight ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-accent hover:bg-accent/80 text-accent-foreground'}`}>
                     <Link href="/custom-website">
                       {pkg.actionText} <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
@@ -331,7 +331,7 @@ export default function PackagesPage() {
                   <AlertDialogTrigger asChild>
                     <Button
                       onClick={() => setSelectedPackage(pkg)}
-                      className={`w-full text-lg py-6 ${pkg.highlight ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-accent hover:bg-accent/80 text-accent-foreground'}`}
+                      className={`w-full text-base md:text-lg py-3 md:py-6 ${pkg.highlight ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-accent hover:bg-accent/80 text-accent-foreground'}`}
                     >
                       <ShoppingCart className="mr-2 h-5 w-5" /> {pkg.actionText}
                     </Button>

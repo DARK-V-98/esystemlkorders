@@ -76,12 +76,12 @@ export default function MenuPage() {
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <header className="mb-8">
         <div className="flex items-center space-x-3 mb-2">
-          <LayoutDashboard className="h-10 w-10 text-primary" />
-          <h1 className="text-4xl font-bold font-headline text-primary">
+          <LayoutDashboard className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+          <h1 className="text-3xl md:text-4xl font-bold font-headline text-primary">
             eSystemLK Orders
           </h1>
         </div>
-        <p className="text-muted-foreground text-lg">
+        <p className="text-md sm:text-lg text-muted-foreground">
           Welcome! Select an option below to get started.
         </p>
         <Button asChild variant="link" className="p-0 h-auto mt-2 text-accent hover:underline">
@@ -138,5 +138,3 @@ function MenuItemCard({ title, description, icon: Icon, href }: MenuItemCardProp
     </Link>
   );
 }
-
-    

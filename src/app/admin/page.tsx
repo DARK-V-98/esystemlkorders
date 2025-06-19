@@ -164,7 +164,7 @@ function LivePriceEditorContent() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center"><DollarSign className="mr-2 h-5 w-5 text-primary" />Edit Price Per Page</CardTitle>
+          <CardTitle className="flex items-center text-xl md:text-2xl"><DollarSign className="mr-2 h-5 w-5 text-primary" />Edit Price Per Page</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -198,7 +198,7 @@ function LivePriceEditorContent() {
         </CardFooter>
       </Card>
 
-      <h2 className="text-xl font-semibold mt-6 mb-2 flex items-center">
+      <h2 className="text-lg md:text-xl font-semibold mt-6 mb-2 flex items-center">
         <ListChecks className="mr-2 h-6 w-6 text-primary"/>
         Edit Feature Prices
       </h2>
@@ -208,7 +208,7 @@ function LivePriceEditorContent() {
       <Accordion type="multiple" defaultValue={liveCategories.map(cat => cat.id)} className="w-full">
         {liveCategories.map((category, categoryIndex) => (
           <AccordionItem value={category.id} key={category.id}>
-            <AccordionTrigger className="hover:bg-muted/50 transition-colors text-lg">
+            <AccordionTrigger className="hover:bg-muted/50 transition-colors text-md md:text-lg">
               <div className="flex items-center">
                 {category.iconName && <DynamicIcon name={category.iconName} className="mr-2 h-5 w-5 text-primary" />}
                 {category.name}
@@ -479,7 +479,7 @@ function AdminOrdersManagement() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex-grow">
-                  <CardTitle className="flex items-center"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
+                  <CardTitle className="flex items-center text-xl md:text-2xl"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
                   <CardDescription>Review and update project order statuses and payment statuses.</CardDescription>
               </div>
               <div className="relative w-full sm:w-auto sm:max-w-xs">
@@ -716,25 +716,25 @@ export default function AdminConsolePage() {
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
       <header className="mb-8">
         <div className="flex items-center space-x-3 mb-2">
-          <ShieldCheck className="h-10 w-10 text-primary" />
-          <h1 className="text-4xl font-bold font-headline text-primary">
+          <ShieldCheck className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+          <h1 className="text-3xl md:text-4xl font-bold font-headline text-primary">
             Admin Console
           </h1>
         </div>
-        <p className="text-muted-foreground text-lg">
+        <p className="text-md sm:text-lg text-muted-foreground">
           Manage application settings, pricing, and orders.
         </p>
       </header>
 
       <Tabs defaultValue="manage-orders" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 mb-6">
-          <TabsTrigger value="manage-orders">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mb-6">
+          <TabsTrigger value="manage-orders" className="text-xs sm:text-sm">
             <ListOrdered className="mr-2 h-4 w-4" /> Manage Orders
           </TabsTrigger>
-          <TabsTrigger value="live-editor">
+          <TabsTrigger value="live-editor" className="text-xs sm:text-sm">
             <Edit className="mr-2 h-4 w-4" /> Live Price Editor
           </TabsTrigger>
-          <TabsTrigger value="seed-data">
+          <TabsTrigger value="seed-data" className="text-xs sm:text-sm">
             <UploadCloud className="mr-2 h-4 w-4" /> Seed/Update Defaults
           </TabsTrigger>
         </TabsList>
@@ -746,11 +746,11 @@ export default function AdminConsolePage() {
         <TabsContent value="live-editor">
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="text-xl flex items-center">
-                <Edit className="mr-2 h-6 w-6 text-accent" />
+              <CardTitle className="text-xl md:text-2xl flex items-center">
+                <Edit className="mr-2 h-5 w-5 md:h-6 md:w-6 text-accent" />
                 Live Price Editor
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm md:text-base">
                 Directly edit feature prices and page prices (USD and LKR) stored in Firestore.
                 Changes made here will reflect on the "Make Custom Website" page.
               </CardDescription>
@@ -764,11 +764,11 @@ export default function AdminConsolePage() {
         <TabsContent value="seed-data">
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="text-xl flex items-center">
-                <UploadCloud className="mr-2 h-6 w-6 text-accent" />
+              <CardTitle className="text-xl md:text-2xl flex items-center">
+                <UploadCloud className="mr-2 h-5 w-5 md:h-6 md:w-6 text-accent" />
                 Seed Application Defaults to Firestore
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm md:text-base">
                 Use this section to initialize or overwrite the pricing data in Firestore
                 with the hardcoded default values from the application code.
                 This includes dual currency prices (USD and LKR).

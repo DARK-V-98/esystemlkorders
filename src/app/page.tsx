@@ -81,10 +81,10 @@ export default function OrdersPage() {
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold font-headline text-primary">
+        <h1 className="text-3xl md:text-4xl font-bold font-headline text-primary">
           eSystemLK Orders
         </h1>
-        <p className="text-muted-foreground text-lg">
+        <p className="text-md sm:text-lg text-muted-foreground">
           Overview of all website development projects.
         </p>
       </header>
