@@ -24,22 +24,22 @@ const safeToISOString = (dateInput: any, defaultToNow: boolean = false): string 
 
 export async function fetchOrders(
   filters: OrderFilters = {},
-  sortConfig: SortConfig = { key: 'createdDate', direction: 'descending' }
+  sortConfig: SortConfig = { key: 'createdDate', direction: 'descending' },
+  userEmailForFilter?: string // Added for server-side filtering by user email
 ): Promise<Order[]> {
   try {
     const ordersCollectionRef = collection(db, 'orders');
     const firestoreSortKey: string = sortConfig.key || 'createdDate';
-    let queryDirectionToSort: 'asc' | 'desc' = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
+    const queryDirectionToSort: 'asc' | 'desc' = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
     
+    const queryConstraints = [];
+    queryConstraints.push(orderBy(firestoreSortKey, queryDirectionToSort));
 
-    let requiresClientSideReverse = false;
-    // Firestore orderBy 'desc' for timestamps sorts newest first. If we want 'desc' (newest first),
-    // but Firestore returns oldest first with 'asc', we might need to reverse.
-    // Let's simplify: if sorting by 'createdDate' descending, Firestore's 'desc' is correct.
-    // The previous logic for reversing seemed a bit complex, let's rely on Firestore's native ordering.
-    // Default 'createdDate' 'desc' should fetch newest first.
+    if (userEmailForFilter) {
+      queryConstraints.push(where("userEmail", "==", userEmailForFilter));
+    }
     
-    const q = query(ordersCollectionRef, orderBy(firestoreSortKey, queryDirectionToSort));
+    const q = query(ordersCollectionRef, ...queryConstraints);
     
     const querySnapshot = await getDocs(q);
     
@@ -48,8 +48,6 @@ export async function fetchOrders(
 
       let projectDetails = data.projectDetails as ProjectDetailsForm | undefined;
       if (projectDetails && projectDetails.lastUpdated) {
-        // Ensure we're creating a new object if we modify it to avoid potential issues
-        // if the original `data.projectDetails` is used elsewhere (though unlikely here).
         projectDetails = {
           ...projectDetails,
           lastUpdated: safeToISOString(projectDetails.lastUpdated),
@@ -89,7 +87,8 @@ export async function fetchOrders(
       } as Order;
     });
 
-    // Client-side filtering and sorting (if Firestore doesn't fully cover it or for refinement)
+    // Client-side filtering for other filters (status, projectType, searchTerm)
+    // These are applied *after* potential server-side userEmail filtering.
     if (filters.status) {
       fetchedOrders = fetchedOrders.filter(order => order.status === filters.status);
     }
