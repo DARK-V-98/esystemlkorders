@@ -1,9 +1,10 @@
 
 'use server';
 /**
- * @fileOverview A Genkit flow for sending order status update emails using SendGrid.
+ * @fileOverview A Genkit flow for handling order status update notifications.
+ * Currently, this is a placeholder and does not send actual emails.
  *
- * - sendOrderStatusUpdateEmail - A function that triggers the email sending process.
+ * - sendOrderStatusUpdateEmail - A function that triggers the notification process.
  * - SendOrderStatusEmailInput - The input type for the flow.
  * - SendOrderStatusEmailOutput - The return type for the flow.
  */
@@ -11,7 +12,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit/zod';
 import type { OrderStatus } from '@/types';
-import sgMail from '@sendgrid/mail';
+// import sgMail from '@sendgrid/mail'; // Removed SendGrid
 
 export const SendOrderStatusEmailInputSchema = z.object({
   customerEmail: z.string().email().describe('The email address of the customer.'),
@@ -26,14 +27,14 @@ export const SendOrderStatusEmailInputSchema = z.object({
 export type SendOrderStatusEmailInput = z.infer<typeof SendOrderStatusEmailInputSchema>;
 
 export const SendOrderStatusEmailOutputSchema = z.object({
-  success: z.boolean().describe('Whether the email sending process was successful.'),
-  message: z.string().describe('A message indicating the result of the email sending process.'),
+  success: z.boolean().describe('Whether the notification process was successful.'),
+  message: z.string().describe('A message indicating the result of the notification process.'),
 });
 export type SendOrderStatusEmailOutput = z.infer<typeof SendOrderStatusEmailOutputSchema>;
 
 async function generateEmailContent(input: SendOrderStatusEmailInput): Promise<{ subject: string, body: string }> {
-  // This is a placeholder. You can use an LLM to generate email content
-  // or use a templating engine (e.g., Handlebars, EJS) with predefined templates.
+  // This is a placeholder for email content generation.
+  // You can use an LLM to generate email content or use a templating engine.
   
   let subject = `Order Update: Your project "${input.projectName}" is now ${input.newStatus}`;
   let body = `
@@ -61,7 +62,6 @@ async function generateEmailContent(input: SendOrderStatusEmailInput): Promise<{
     case 'Review':
       subject = `👀 Your Project "${input.projectName}" is Ready for Review! (Order: ${input.formattedOrderId})`;
       body += `<p>Great news! Your project is now ready for your review. Please take a look and provide us with your valuable feedback.</p>`;
-      // body += `<p>You can review it here: <a href="${input.projectLink || '#'}">${input.projectLink || 'Please contact us for the review link.'}</a></p>`;
       break;
     case 'Completed':
       subject = `✅ Your Project "${input.projectName}" is Completed! (Order: ${input.formattedOrderId})`;
@@ -88,7 +88,6 @@ async function generateEmailContent(input: SendOrderStatusEmailInput): Promise<{
 <p>Thank you,<br>
 eSystemLK Team</p>
 `;
-  // For more advanced HTML emails, consider using an email templating library or service.
   return { subject, body };
 }
 
@@ -102,46 +101,53 @@ const sendOrderStatusEmailFlow = ai.defineFlow(
   async (input) => {
     console.log('[sendOrderStatusEmailFlow] Received input:', JSON.stringify(input, null, 2));
 
-    const apiKey = process.env.SENDGRID_API_KEY;
-    const fromEmail = process.env.SENDGRID_FROM_EMAIL;
+    // const apiKey = process.env.SENDGRID_API_KEY; // Removed
+    // const fromEmail = process.env.SENDGRID_FROM_EMAIL; // Removed
 
-    if (!apiKey || !fromEmail) {
-      const errorMessage = 'SendGrid API Key or From Email is not configured in environment variables.';
-      console.error(`[sendOrderStatusEmailFlow] ${errorMessage}`);
-      return { 
-        success: false, 
-        message: `Email configuration error: ${errorMessage} Email not sent.` 
-      };
-    }
+    // if (!apiKey || !fromEmail) { // Removed
+    //   const errorMessage = 'Email service is not configured in environment variables.';
+    //   console.error(`[sendOrderStatusEmailFlow] ${errorMessage}`);
+    //   return { 
+    //     success: false, 
+    //     message: `Email configuration error: ${errorMessage} Email not sent.` 
+    //   };
+    // }
 
-    sgMail.setApiKey(apiKey);
-    const { subject, body } = await generateEmailContent(input);
+    // sgMail.setApiKey(apiKey); // Removed
+    const { subject, body } = await generateEmailContent(input); // Still generate content for logging/future
+    console.log(`[sendOrderStatusEmailFlow] Generated email content for ${input.customerEmail} for status ${input.newStatus}:`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Body: ${body}`);
 
-    const msg = {
-      to: input.customerEmail,
-      from: fromEmail, // Use the configured sender email
-      subject: subject,
-      html: body, // Send as HTML email
-      // text: body.replace(/<[^>]*>?/gm, ''), // Optional: for plain text version
+
+    // Placeholder: Actual email sending logic is removed.
+    // This section is where you would integrate an email sending service.
+    // For now, we just return a success message indicating it's a placeholder.
+    const placeholderMessage = `Email notification for status "${input.newStatus}" to ${input.customerEmail} would be sent here (currently a placeholder).`;
+    console.log(`[sendOrderStatusEmailFlow] ${placeholderMessage}`);
+    
+    return { 
+      success: true, 
+      message: `Notification step processed for ${input.customerEmail}. Email sending is currently a placeholder.` 
     };
 
-    try {
-      await sgMail.send(msg);
-      console.log(`[sendOrderStatusEmailFlow] Email sent to ${input.customerEmail} via SendGrid for status ${input.newStatus}`);
-      return { 
-        success: true, 
-        message: `Email notification for status "${input.newStatus}" sent to ${input.customerEmail}.` 
-      };
-    } catch (error: any) {
-      console.error('[sendOrderStatusEmailFlow] Error sending email via SendGrid:', error);
-      if (error.response) {
-        console.error(error.response.body);
-      }
-      return { 
-        success: false, 
-        message: `Failed to send email: ${error.message || 'Unknown SendGrid error'}.` 
-      };
-    }
+    // try { // Removed SendGrid try/catch
+    //   await sgMail.send(msg);
+    //   console.log(`[sendOrderStatusEmailFlow] Email sent to ${input.customerEmail} via SendGrid for status ${input.newStatus}`);
+    //   return { 
+    //     success: true, 
+    //     message: `Email notification for status "${input.newStatus}" sent to ${input.customerEmail}.` 
+    //   };
+    // } catch (error: any) {
+    //   console.error('[sendOrderStatusEmailFlow] Error sending email via SendGrid:', error);
+    //   if (error.response) {
+    //     console.error(error.response.body);
+    //   }
+    //   return { 
+    //     success: false, 
+    //     message: `Failed to send email: ${error.message || 'Unknown SendGrid error'}.` 
+    //   };
+    // }
   }
 );
 

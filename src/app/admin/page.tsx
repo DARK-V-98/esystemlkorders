@@ -313,7 +313,7 @@ function AdminOrdersManagement() {
         return;
       }
       
-      const oldStatus = orderToUpdate.status; // Capture old status
+      const oldStatus = orderToUpdate.status; 
 
       await updateDoc(orderDocRef, { status: newStatus });
       toast({ title: "Order Status Updated", description: `Order ${formattedOrderId} status changed to ${newStatus}.` });
@@ -326,7 +326,6 @@ function AdminOrdersManagement() {
         )
       );
 
-      // Call Genkit flow to send email
       if (orderToUpdate.contactEmail) {
         const emailInput = {
           customerEmail: orderToUpdate.contactEmail,
@@ -341,7 +340,7 @@ function AdminOrdersManagement() {
           const emailResult = await sendOrderStatusUpdateEmail(emailInput);
           if (emailResult.success) {
             toast({ 
-              title: "Email Notification", 
+              title: "Notification Update",
               description: (
                 <div className="flex items-start gap-2">
                   <Mail className="h-4 w-4 mt-0.5 text-green-500" />
@@ -352,7 +351,7 @@ function AdminOrdersManagement() {
           } else {
             toast({ 
               variant: "destructive", 
-              title: "Email Notification Failed", 
+              title: "Notification Update Failed", 
               description: emailResult.message 
             });
           }
@@ -360,15 +359,15 @@ function AdminOrdersManagement() {
           console.error("Error calling sendOrderStatusUpdateEmail flow:", emailError);
           toast({ 
             variant: "destructive", 
-            title: "Email Flow Error", 
-            description: "Could not initiate the email sending process." 
+            title: "Notification Flow Error", 
+            description: "Could not initiate the notification process." 
           });
         }
       } else {
         toast({
           variant: "default",
-          title: "Email Notification Skipped",
-          description: `No contact email found for order ${formattedOrderId}.`
+          title: "Notification Skipped",
+          description: `No contact email found for order ${formattedOrderId}. Notification step bypassed.`
         });
       }
 
