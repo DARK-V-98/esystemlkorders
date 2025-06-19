@@ -25,11 +25,18 @@ export async function fetchOrders(
 ): Promise<Order[]> {
   try {
     const ordersCollectionRef = collection(db, 'orders');
-    // Ensure the sort key is a string and valid for Firestore's orderBy.
-    // 'createdDate' is assumed to be a Firestore Timestamp or a string that Firestore can sort.
-    // Other SortableOrderKey fields are strings or numbers.
     const firestoreSortKey: string = sortConfig.key || 'createdDate';
-    const q = query(ordersCollectionRef, orderBy(firestoreSortKey, sortConfig.direction));
+    let queryDirectionToSort: 'asc' | 'desc' = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
+    let requiresClientSideReverse = false;
+
+    // Workaround for potential Firestore issues with descending sorts:
+    // Query in ascending order and reverse on client if descending is requested.
+    if (sortConfig.direction === 'descending') {
+      queryDirectionToSort = 'asc';
+      requiresClientSideReverse = true;
+    }
+    
+    const q = query(ordersCollectionRef, orderBy(firestoreSortKey, queryDirectionToSort));
     
     const querySnapshot = await getDocs(q);
     
@@ -58,6 +65,10 @@ export async function fetchOrders(
         projectDetails: data.projectDetails as ProjectDetailsForm | undefined, 
       } as Order;
     });
+
+    if (requiresClientSideReverse) {
+      fetchedOrders.reverse();
+    }
 
     // Apply client-side filtering if not handled by Firestore query
     if (filters.status) {
