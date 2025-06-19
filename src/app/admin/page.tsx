@@ -12,17 +12,18 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, 
   ListChecks, ListOrdered, CheckSquare, Search, ExternalLink, XCircle, Settings, Clock, 
-  MoreVertical, PauseCircle, PlayCircle, Trash2, Mail, CreditCard, Banknote // Added CreditCard, Banknote
+  MoreVertical, PauseCircle, PlayCircle, Trash2, Mail, CreditCard, Banknote,
+  User as UserIcon, Package as PackageIcon, Info as InfoIcon // Added icons for mobile card view
 } from "lucide-react";
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc, Timestamp, query, orderBy as firestoreOrderBy, deleteDoc } from 'firebase/firestore';
 import { DEFAULT_FEATURE_CATEGORIES, DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
 import { DynamicIcon } from '@/components/icons';
-import type { Order, OrderStatus, PaymentStatus } from '@/types'; // Added PaymentStatus
+import type { Order, OrderStatus, PaymentStatus } from '@/types'; 
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { OrderStatusBadge } from "@/components/order-status-badge";
-import { PaymentStatusBadge } from "@/components/payment-status-badge"; // Import PaymentStatusBadge
-import { formatDate, PAYMENT_STATUSES } from "@/lib/data"; // Added PAYMENT_STATUSES
+import { PaymentStatusBadge } from "@/components/payment-status-badge"; 
+import { formatDate, PAYMENT_STATUSES } from "@/lib/data"; 
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -48,6 +49,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { sendOrderStatusUpdateEmail } from '@/ai/flows/send-order-status-email-flow';
+import { useIsMobile } from '@/hooks/use-is-mobile'; // Import useIsMobile
 
 
 const FEATURES_COLLECTION = 'siteFeaturesConfig';
@@ -276,6 +278,7 @@ function AdminOrdersManagement() {
   const [adminSearchTerm, setAdminSearchTerm] = useState('');
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const fetchAdminOrders = async () => {
     setIsLoading(true);
@@ -290,7 +293,7 @@ function AdminOrdersManagement() {
           ...data,
           createdDate: (data.createdDate as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
           deadline: (data.deadline as Timestamp)?.toDate().toISOString(),
-          paymentStatus: data.paymentStatus || 'Not Paid', // Ensure paymentStatus defaults
+          paymentStatus: data.paymentStatus || 'Not Paid', 
         } as Order;
       });
       setAllOrders(fetchedOrders);
@@ -313,7 +316,9 @@ function AdminOrdersManagement() {
     } else {
       setFilteredOrders(
         allOrders.filter(order =>
-          order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase())
+          order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase()) ||
+          order.clientName.toLowerCase().includes(adminSearchTerm.toLowerCase()) ||
+          order.projectName.toLowerCase().includes(adminSearchTerm.toLowerCase())
         )
       );
     }
@@ -350,7 +355,6 @@ function AdminOrdersManagement() {
       
       const updatedOrders = allOrders.map(o => o.id === orderId ? {...o, status: newStatus} : o);
       setAllOrders(updatedOrders);
-      // setFilteredOrders remains updated via its own useEffect dependency on allOrders
 
       if (orderToUpdate.contactEmail) {
         const emailInput = {
@@ -414,7 +418,6 @@ function AdminOrdersManagement() {
       
       const updatedOrders = allOrders.map(o => o.id === orderId ? {...o, paymentStatus: newPaymentStatus} : o);
       setAllOrders(updatedOrders);
-      // No email notification for payment status change by default
     } catch (error) {
       console.error(`Error updating payment status for order ${formattedOrderId} to ${newPaymentStatus}:`, error);
       toast({ variant: "destructive", title: "Update Error", description: `Could not update payment status for order ${formattedOrderId}.` });
@@ -433,7 +436,6 @@ function AdminOrdersManagement() {
       
       const updatedOrders = allOrders.filter(o => o.id !== orderToDelete.id);
       setAllOrders(updatedOrders);
-      // setFilteredOrders is updated via its useEffect
       setOrderToDelete(null); 
     } catch (error) {
       console.error(`Error deleting order ${orderToDelete.formattedOrderId}:`, error);
@@ -480,17 +482,17 @@ function AdminOrdersManagement() {
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="flex-grow">
                   <CardTitle className="flex items-center text-xl md:text-2xl"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
-                  <CardDescription>Review and update project order statuses and payment statuses.</CardDescription>
+                  <CardDescription className="text-sm md:text-base">Review and update project order statuses and payment statuses.</CardDescription>
               </div>
               <div className="relative w-full sm:w-auto sm:max-w-xs">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                   type="search"
-                  placeholder="Search by Order ID..."
+                  placeholder="Search orders..."
                   value={adminSearchTerm}
                   onChange={(e) => setAdminSearchTerm(e.target.value)}
                   className="pl-8 w-full"
-                  aria-label="Search orders by ID"
+                  aria-label="Search orders by ID, client, or project name"
                   />
               </div>
           </div>
@@ -500,41 +502,22 @@ function AdminOrdersManagement() {
             <p className="text-muted-foreground text-center py-4">
               {adminSearchTerm ? `No orders found matching "${adminSearchTerm}".` : "No orders found."}
               </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Client Name</TableHead>
-                    <TableHead>Project Name</TableHead>
-                    <TableHead>Order Status</TableHead>
-                    <TableHead>Payment Status</TableHead>
-                    <TableHead>Created Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.formattedOrderId}</TableCell>
-                      <TableCell>{order.clientName}</TableCell>
-                      <TableCell>{order.projectName}</TableCell>
-                      <TableCell><OrderStatusBadge status={order.status} /></TableCell>
-                      <TableCell><PaymentStatusBadge status={order.paymentStatus} /></TableCell>
-                      <TableCell>{formatDate(order.createdDate, 'PPp')}</TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/orders/${order.id}`}>
-                            View <ExternalLink className="ml-1.5 h-3 w-3" />
-                          </Link>
-                        </Button>
-                        
+          ) : isMobile ? (
+             <div className="space-y-4">
+              {filteredOrders.map((order) => (
+                <Card key={order.id} className="shadow-md">
+                   <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle className="text-base font-semibold">{order.projectName}</CardTitle>
+                            <CardDescription className="text-xs">ID: {order.formattedOrderId}</CardDescription>
+                        </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button 
-                              variant="outline" 
-                              size="sm" 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8" 
                               disabled={getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus') || deletingOrderId === order.id}
                             >
                               {(getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus')) ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
@@ -609,7 +592,159 @@ function AdminOrdersManagement() {
                              <AlertDialogTrigger asChild>
                                <DropdownMenuItem 
                                  className="text-red-600 focus:bg-red-100 focus:text-red-700"
-                                 onSelect={(e) => e.preventDefault()} // Prevents DropdownMenu from closing
+                                 onSelect={(e) => e.preventDefault()} 
+                                 onClick={() => setOrderToDelete(order)}
+                                 disabled={deletingOrderId === order.id || getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus')}
+                               >
+                                 <Trash2 className="mr-2 h-4 w-4" /> Delete Order
+                               </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm pb-4">
+                    <div className="flex items-center">
+                      <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span>Client: {order.clientName}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <PackageIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                       <span>Type: {order.projectType}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <InfoIcon className="mr-1 h-4 w-4 text-muted-foreground self-start mt-0.5" />
+                        <div className="flex flex-col gap-1">
+                             <OrderStatusBadge status={order.status} />
+                             <PaymentStatusBadge status={order.paymentStatus} />
+                        </div>
+                    </div>
+                     <div className="flex items-center text-xs text-muted-foreground">
+                         <Clock className="mr-2 h-3 w-3" /> 
+                         <span>Created: {formatDate(order.createdDate, 'PPp')}</span>
+                     </div>
+                  </CardContent>
+                  <CardFooter>
+                     <Button asChild variant="outline" size="sm" className="w-full">
+                      <Link href={`/orders/${order.id}`}>
+                        View Details <ExternalLink className="ml-1.5 h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Order ID</TableHead>
+                    <TableHead className="text-xs">Client Name</TableHead>
+                    <TableHead className="text-xs">Project Name</TableHead>
+                    <TableHead className="text-xs">Order Status</TableHead>
+                    <TableHead className="text-xs">Payment Status</TableHead>
+                    <TableHead className="text-xs">Created Date</TableHead>
+                    <TableHead className="text-right text-xs">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.map((order) => (
+                    <TableRow key={order.id} className="hover:bg-muted/50">
+                      <TableCell className="font-medium text-xs">{order.formattedOrderId}</TableCell>
+                      <TableCell className="text-xs">{order.clientName}</TableCell>
+                      <TableCell className="text-xs">{order.projectName}</TableCell>
+                      <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                      <TableCell><PaymentStatusBadge status={order.paymentStatus} /></TableCell>
+                      <TableCell className="text-xs">{formatDate(order.createdDate, 'PPp')}</TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/orders/${order.id}`}>
+                            View <ExternalLink className="ml-1.5 h-3 w-3" />
+                          </Link>
+                        </Button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              disabled={getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus') || deletingOrderId === order.id}
+                            >
+                              {(getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus')) ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                               <span className="sr-only">Order Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {!terminalStatuses.includes(order.status) && order.status === 'Pending' && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(order.id, "In Progress", order.formattedOrderId)}
+                                  disabled={getUpdatingState(order.id, 'orderStatus') || deletingOrderId === order.id}
+                                  className="bg-green-500 hover:bg-green-600 text-white"
+                                >
+                                  <CheckSquare className="mr-1.5 h-4 w-4" /> Confirm Order
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateStatus(order.id, "Rejected", order.formattedOrderId)}
+                                  disabled={getUpdatingState(order.id, 'orderStatus') || deletingOrderId === order.id}
+                                  className="bg-pink-700 hover:bg-pink-800 text-white"
+                                >
+                                  <XCircle className="mr-1.5 h-4 w-4" /> Reject Order
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            {!terminalStatuses.includes(order.status) && order.status !== 'Pending' && (
+                                <>
+                                 <DropdownMenuLabel>Change Order Status</DropdownMenuLabel>
+                                  {availableActions
+                                    .filter(action => action.newStatus !== order.status) 
+                                    .filter(action => action.allowedCurrentStatuses?.includes(order.status) && action.newStatus !== "Rejected") 
+                                    .map(action => (
+                                    <DropdownMenuItem
+                                      key={`order-${action.newStatus}`}
+                                      onClick={() => handleUpdateStatus(order.id, action.newStatus, order.formattedOrderId)}
+                                      disabled={getUpdatingState(order.id, 'orderStatus') || deletingOrderId === order.id}
+                                      className={action.className}
+                                    >
+                                      <action.icon className="mr-2 h-4 w-4" />
+                                      {action.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                </>
+                            )}
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger 
+                                    disabled={getUpdatingState(order.id, 'paymentStatus') || deletingOrderId === order.id}
+                                >
+                                    <Banknote className="mr-2 h-4 w-4" /> Update Payment Status
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuLabel>Set Payment Status</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {PAYMENT_STATUSES.map(pStatus => (
+                                            <DropdownMenuItem 
+                                                key={pStatus}
+                                                onClick={() => handleUpdatePaymentStatus(order.id, pStatus, order.formattedOrderId)}
+                                                disabled={getUpdatingState(order.id, 'paymentStatus') || order.paymentStatus === pStatus}
+                                            >
+                                                {order.paymentStatus === pStatus && <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />}
+                                                {pStatus}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
+
+                            <DropdownMenuSeparator />
+                             <AlertDialogTrigger asChild>
+                               <DropdownMenuItem 
+                                 className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                                 onSelect={(e) => e.preventDefault()} 
                                  onClick={() => setOrderToDelete(order)}
                                  disabled={deletingOrderId === order.id || getUpdatingState(order.id, 'orderStatus') || getUpdatingState(order.id, 'paymentStatus')}
                                >
