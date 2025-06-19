@@ -110,6 +110,7 @@ export interface ProjectDetailsForm {
   // Final Consent
   confirmDetailsAccurate: boolean;
   agreeToShareContent: boolean;
+  lastUpdated?: string; // Added for serializable timestamp
 }
 
 export interface PackageOrderDetailsForm {
@@ -146,6 +147,7 @@ export interface PackageOrderDetailsForm {
   businessGoalsSpecialNeeds?: string;
   confirmDetailsCorrect: boolean;
   agreeToShareMaterials: boolean;
+  lastUpdated?: string; // Added for serializable timestamp
 }
 
 
@@ -170,7 +172,7 @@ export interface Order {
   hostingDetails?: string;
   projectDetails?: ProjectDetailsForm; 
   packageOrderDetails?: PackageOrderDetailsForm; 
-  paymentStatus?: PaymentStatus; // New field for payment status
+  paymentStatus?: PaymentStatus; 
 }
 
 export interface OrderFilters {
@@ -191,7 +193,7 @@ export type SortableOrderKey =
   | 'budget'
   | 'numberOfPages'
   | 'userEmail'
-  | 'paymentStatus'; // Added for sorting
+  | 'paymentStatus'; 
 
 export interface SortConfig {
   key: SortableOrderKey | null; 
@@ -228,3 +230,4 @@ export interface FeatureCategory {
 }
 
 export type Currency = 'usd' | 'lkr';
+

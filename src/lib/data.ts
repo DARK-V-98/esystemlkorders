@@ -15,6 +15,9 @@ const safeToISOString = (dateInput: any, defaultToNow: boolean = false): string 
       return parsedDate.toISOString();
     }
   }
+  if (dateInput instanceof Date && !isNaN(dateInput.getTime())) { // Handle if it's already a Date object
+    return dateInput.toISOString();
+  }
   return defaultToNow ? new Date().toISOString() : undefined;
 };
 
@@ -30,10 +33,11 @@ export async function fetchOrders(
     
 
     let requiresClientSideReverse = false;
-    if (firestoreSortKey === 'createdDate' && sortConfig.direction === 'descending') {
-      queryDirectionToSort = 'asc'; 
-      requiresClientSideReverse = true; 
-    }
+    // Firestore orderBy 'desc' for timestamps sorts newest first. If we want 'desc' (newest first),
+    // but Firestore returns oldest first with 'asc', we might need to reverse.
+    // Let's simplify: if sorting by 'createdDate' descending, Firestore's 'desc' is correct.
+    // The previous logic for reversing seemed a bit complex, let's rely on Firestore's native ordering.
+    // Default 'createdDate' 'desc' should fetch newest first.
     
     const q = query(ordersCollectionRef, orderBy(firestoreSortKey, queryDirectionToSort));
     
@@ -41,6 +45,24 @@ export async function fetchOrders(
     
     let fetchedOrders: Order[] = querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
+
+      let projectDetails = data.projectDetails as ProjectDetailsForm | undefined;
+      if (projectDetails && projectDetails.lastUpdated) {
+        // Ensure we're creating a new object if we modify it to avoid potential issues
+        // if the original `data.projectDetails` is used elsewhere (though unlikely here).
+        projectDetails = {
+          ...projectDetails,
+          lastUpdated: safeToISOString(projectDetails.lastUpdated),
+        };
+      }
+
+      let packageOrderDetails = data.packageOrderDetails as PackageOrderDetailsForm | undefined;
+      if (packageOrderDetails && packageOrderDetails.lastUpdated) {
+        packageOrderDetails = {
+          ...packageOrderDetails,
+          lastUpdated: safeToISOString(packageOrderDetails.lastUpdated),
+        };
+      }
       
       return {
         id: docSnapshot.id,
@@ -49,7 +71,7 @@ export async function fetchOrders(
         projectName: data.projectName || 'N/A',
         projectType: data.projectType || 'Custom Build',
         status: data.status || 'Pending',
-        paymentStatus: data.paymentStatus || 'Not Paid', // Default to 'Not Paid'
+        paymentStatus: data.paymentStatus || 'Not Paid', 
         description: data.description || '',
         requestedFeatures: (Array.isArray(data.requestedFeatures) ? data.requestedFeatures : []) as SelectedFeatureInOrder[],
         createdDate: safeToISOString(data.createdDate, true)!, 
@@ -62,16 +84,12 @@ export async function fetchOrders(
         userEmail: data.userEmail || 'N/A',
         domain: data.domain || undefined,
         hostingDetails: data.hostingDetails || undefined,
-        projectDetails: data.projectDetails as ProjectDetailsForm | undefined, 
-        packageOrderDetails: data.packageOrderDetails as PackageOrderDetailsForm | undefined,
+        projectDetails: projectDetails, 
+        packageOrderDetails: packageOrderDetails,
       } as Order;
     });
 
-    if (requiresClientSideReverse) {
-      fetchedOrders.reverse();
-    }
-
-    // Apply client-side filtering if not handled by Firestore query
+    // Client-side filtering and sorting (if Firestore doesn't fully cover it or for refinement)
     if (filters.status) {
       fetchedOrders = fetchedOrders.filter(order => order.status === filters.status);
     }
@@ -102,6 +120,22 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
     if (docSnap.exists()) {
       const data = docSnap.data();
 
+      let projectDetails = data.projectDetails as ProjectDetailsForm | undefined;
+      if (projectDetails && projectDetails.lastUpdated) {
+        projectDetails = {
+            ...projectDetails,
+            lastUpdated: safeToISOString(projectDetails.lastUpdated),
+        };
+      }
+
+      let packageOrderDetails = data.packageOrderDetails as PackageOrderDetailsForm | undefined;
+      if (packageOrderDetails && packageOrderDetails.lastUpdated) {
+         packageOrderDetails = {
+            ...packageOrderDetails,
+            lastUpdated: safeToISOString(packageOrderDetails.lastUpdated),
+        };
+      }
+
       return {
         id: docSnap.id,
         formattedOrderId: data.formattedOrderId || docSnap.id,
@@ -109,7 +143,7 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
         projectName: data.projectName || 'N/A',
         projectType: data.projectType || 'Custom Build',
         status: data.status || 'Pending',
-        paymentStatus: data.paymentStatus || 'Not Paid', // Default to 'Not Paid'
+        paymentStatus: data.paymentStatus || 'Not Paid', 
         description: data.description || '',
         requestedFeatures: (Array.isArray(data.requestedFeatures) ? data.requestedFeatures : []) as SelectedFeatureInOrder[],
         createdDate: safeToISOString(data.createdDate, true)!, 
@@ -122,8 +156,8 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
         userEmail: data.userEmail || 'N/A',
         domain: data.domain || undefined,
         hostingDetails: data.hostingDetails || undefined,
-        projectDetails: data.projectDetails as ProjectDetailsForm | undefined,
-        packageOrderDetails: data.packageOrderDetails as PackageOrderDetailsForm | undefined, 
+        projectDetails: projectDetails,
+        packageOrderDetails: packageOrderDetails, 
       } as Order;
     } else {
       console.log("No such order document!");
@@ -159,13 +193,15 @@ export const PAYMENT_STATUSES: PaymentStatus[] = [
 export function formatDate(dateInput: string | number | Date | undefined | null, dateFormat: string = 'PPP'): string {
   if (!dateInput) return 'N/A';
   try {
-    const date = new Date(dateInput); 
-    if (isNaN(date.getTime())) { 
-      return 'Invalid Date';
+    // Ensure dateInput is a Date object before formatting
+    const date = typeof dateInput === 'string' || typeof dateInput === 'number' ? new Date(dateInput) : dateInput;
+    if (date instanceof Date && !isNaN(date.getTime())) { 
+      return format(date, dateFormat);
     }
-    return format(date, dateFormat);
+    return 'Invalid Date';
   } catch (error) {
     console.error("Error formatting date:", error, "Input was:", dateInput);
     return 'Invalid Date Format';
   }
 }
+
