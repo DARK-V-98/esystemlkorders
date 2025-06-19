@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, ListChecks, ListOrdered, CheckSquare } from "lucide-react";
+import { ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, ListChecks, ListOrdered, CheckSquare, Search, ExternalLink } from "lucide-react";
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc, Timestamp, query, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import { DEFAULT_FEATURE_CATEGORIES, DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
@@ -19,7 +19,6 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { formatDate } from "@/lib/data";
 import Link from "next/link";
-import { ExternalLink } from 'lucide-react';
 
 const FEATURES_COLLECTION = 'siteFeaturesConfig';
 const GLOBAL_PRICING_COLLECTION = 'siteGlobalConfig';
@@ -239,9 +238,11 @@ function LivePriceEditorContent() {
 }
 
 function AdminOrdersManagement() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+  const [adminSearchTerm, setAdminSearchTerm] = useState('');
   const { toast } = useToast();
 
   const fetchAdminOrders = async () => {
@@ -253,13 +254,14 @@ function AdminOrdersManagement() {
         const data = docSnapshot.data();
         return {
           id: docSnapshot.id,
-          formattedOrderId: data.formattedOrderId || docSnapshot.id, // Include formattedOrderId
+          formattedOrderId: data.formattedOrderId || docSnapshot.id,
           ...data,
           createdDate: (data.createdDate as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
           deadline: (data.deadline as Timestamp)?.toDate().toISOString(),
         } as Order;
       });
-      setOrders(fetchedOrders);
+      setAllOrders(fetchedOrders);
+      setFilteredOrders(fetchedOrders); // Initialize filteredOrders with all orders
     } catch (error) {
       console.error("Error fetching orders for admin:", error);
       toast({ variant: "destructive", title: "Fetch Error", description: "Could not load orders." });
@@ -272,16 +274,38 @@ function AdminOrdersManagement() {
     fetchAdminOrders();
   }, []);
 
+  useEffect(() => {
+    // Filter orders based on adminSearchTerm
+    if (adminSearchTerm === '') {
+      setFilteredOrders(allOrders);
+    } else {
+      setFilteredOrders(
+        allOrders.filter(order =>
+          order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase())
+        )
+      );
+    }
+  }, [adminSearchTerm, allOrders]);
+
+
   const handleConfirmOrder = async (orderId: string, formattedOrderId: string) => {
-    setConfirmingOrderId(orderId); // Use Firestore doc ID for state tracking
+    setConfirmingOrderId(orderId); 
     try {
       const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
       await updateDoc(orderDocRef, {
         status: "In Progress" 
       });
       toast({ title: "Order Confirmed", description: `Order ${formattedOrderId} status updated to In Progress.` });
-      // Refresh orders list
-      setOrders(prevOrders => prevOrders.map(o => o.id === orderId ? {...o, status: "In Progress"} : o));
+      // Refresh orders list or update local state
+      const updatedOrders = allOrders.map(o => o.id === orderId ? {...o, status: "In Progress"} : o);
+      setAllOrders(updatedOrders);
+      // Re-apply search filter to the updated list
+      setFilteredOrders(
+        updatedOrders.filter(order =>
+          order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase()) || adminSearchTerm === ''
+        )
+      );
+
     } catch (error) {
       console.error("Error confirming order:", error);
       toast({ variant: "destructive", title: "Confirmation Error", description: `Could not confirm order ${formattedOrderId}.` });
@@ -302,12 +326,29 @@ function AdminOrdersManagement() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
-        <CardDescription>Review and confirm incoming project orders.</CardDescription>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex-grow">
+                <CardTitle className="flex items-center"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
+                <CardDescription>Review and confirm incoming project orders.</CardDescription>
+            </div>
+            <div className="relative w-full sm:w-auto sm:max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                type="search"
+                placeholder="Search by Order ID..."
+                value={adminSearchTerm}
+                onChange={(e) => setAdminSearchTerm(e.target.value)}
+                className="pl-8 w-full"
+                aria-label="Search orders by ID"
+                />
+            </div>
+        </div>
       </CardHeader>
       <CardContent>
-        {orders.length === 0 ? (
-          <p className="text-muted-foreground text-center py-4">No orders found.</p>
+        {filteredOrders.length === 0 ? (
+          <p className="text-muted-foreground text-center py-4">
+            {adminSearchTerm ? `No orders found matching "${adminSearchTerm}".` : "No orders found."}
+            </p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -322,7 +363,7 @@ function AdminOrdersManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.formattedOrderId}</TableCell>
                     <TableCell>{order.clientName}</TableCell>
@@ -331,7 +372,6 @@ function AdminOrdersManagement() {
                     <TableCell>{formatDate(order.createdDate, 'PPp')}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button asChild variant="outline" size="sm">
-                        {/* Link still uses the Firestore document ID for navigation */}
                         <Link href={`/orders/${order.id}`}>
                           View <ExternalLink className="ml-2 h-3 w-3" />
                         </Link>
@@ -518,3 +558,5 @@ export default function AdminConsolePage() {
     </div>
   );
 }
+
+      
