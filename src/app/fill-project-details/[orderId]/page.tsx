@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { Order, ProjectDetailsForm } from '@/types';
 import { Loader2 } from 'lucide-react';
 
@@ -51,7 +51,7 @@ const projectDetailsSchema = z.object({
   businessRegNumber: z.string().optional(),
   companyAddress: z.string().optional(),
   companyContactNumber: z.string().optional(),
-  companyEmail: z.string().email().optional().or(z.literal('')),
+  companyEmail: z.string().email({ message: "Invalid company email address." }).optional().or(z.literal('')),
   companyLogoUrl: z.string().url({ message: "Please enter a valid URL for the company logo." }).optional().or(z.literal('')),
   desiredWebsiteName: z.string().min(1, 'Desired website name is required'),
   hasDomain: z.enum(['Yes', 'No'], { required_error: "Please select if you have a domain."}),
@@ -81,7 +81,7 @@ const projectDetailsSchema = z.object({
     testimonialsSection: z.boolean().optional(),
     fileDownloads: z.boolean().optional(),
     chatIntegration: z.boolean().optional(),
-  }).optional().default({}), // Ensure functionalities object is always present
+  }).optional().default({}),
   paymentGatewaysSelected: z.array(z.enum(paymentGatewayOptions)).optional().default([]),
   otherFeatureRequirements: z.string().optional(),
   pageList: z.string().min(1, 'Page list is required (e.g., Home, About, Contact)'),
@@ -130,7 +130,7 @@ export default function FillProjectDetailsPage() {
       paymentGatewaysSelected: [],
       confirmDetailsAccurate: false,
       agreeToShareContent: false,
-      hasDomain: undefined, // Explicitly undefined for radio groups
+      hasDomain: undefined,
       hasHosting: undefined,
       needsBusinessEmails: undefined,
       hasPageContent: undefined,
@@ -138,6 +138,7 @@ export default function FillProjectDetailsPage() {
       hasImagesReady: undefined,
       hasLegalDocs: undefined,
       themeStyle: undefined,
+      businessEmailCount: 0, // Ensure it has a default, even if 0
     },
   });
 
@@ -159,12 +160,10 @@ export default function FillProjectDetailsPage() {
           setOrderData(fetchedOrder);
           
           if (fetchedOrder.projectDetails) {
-            Object.entries(fetchedOrder.projectDetails).forEach(([key, value]) => {
-               if (key === 'preferredLaunchDate' && typeof value === 'string' && value) {
-                 setValue(key as keyof ProjectDetailsForm, value as any); 
-              } else if (typeof value !== 'undefined') { 
-                setValue(key as keyof ProjectDetailsForm, value as any);
-              }
+            // Deep clone projectDetails to avoid direct state mutation issues with react-hook-form
+            const detailsToSet = JSON.parse(JSON.stringify(fetchedOrder.projectDetails));
+            Object.entries(detailsToSet).forEach(([key, value]) => {
+               setValue(key as keyof ProjectDetailsForm, value as any);
             });
           } else {
              setValue('contactEmail', fetchedOrder.contactEmail || '');
@@ -188,23 +187,32 @@ export default function FillProjectDetailsPage() {
   const onSubmit: SubmitHandler<ProjectDetailsForm> = async (data) => {
     setIsSubmitting(true);
     try {
-      // const orderDocRef = doc(db, 'orders', orderId);
-      // const dataToSave = {
-      //   ...data,
-      //   preferredLaunchDate: data.preferredLaunchDate ? new Date(data.preferredLaunchDate).toISOString() : undefined,
-      // };
-      // await updateDoc(orderDocRef, { projectDetails: dataToSave }); // Firestore save REMOVED as per request
+      const orderDocRef = doc(db, 'orders', orderId);
+      
+      // Prepare data for saving, ensuring preferredLaunchDate is correctly formatted if present
+      const dataToSave: Partial<ProjectDetailsForm> & { lastUpdated?: any } = {
+        ...data,
+        lastUpdated: serverTimestamp(), // Add a timestamp for last update
+      };
 
-      console.log("Form data (not saved to Firestore):", data);
+      if (data.preferredLaunchDate) {
+         // The DatePicker already provides ISO string, so direct assignment is fine
+         // No need to convert new Date(data.preferredLaunchDate).toISOString() unless it's not an ISO string
+        dataToSave.preferredLaunchDate = data.preferredLaunchDate;
+      } else {
+        delete dataToSave.preferredLaunchDate; // Remove if not set, to avoid saving undefined
+      }
+
+
+      await updateDoc(orderDocRef, { projectDetails: dataToSave });
       toast({ 
-        title: 'Form Submitted (Locally)', 
-        description: 'Project details form was processed but NOT saved to the database.' 
+        title: 'Project Details Saved!', 
+        description: 'Your project specifications have been successfully saved to Firestore.' 
       });
-      // Decide if you still want to redirect or stay on the page
-      // router.push(`/orders/${orderId}`); 
+      router.push(`/orders/${orderId}`); 
     } catch (error) {
-      console.error("Error processing project details form:", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to process project details locally.' });
+      console.error("Error saving project details to Firestore:", error);
+      toast({ variant: 'destructive', title: 'Save Error', description: 'Failed to save project details. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -271,7 +279,7 @@ export default function FillProjectDetailsPage() {
             <Controller name="needsBusinessEmails" control={control} render={({ field }) => (
               <div><Label className="mb-1 block">Do you need business emails (e.g., info@yourdomain.com)?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="emailYes" /><Label htmlFor="emailYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="emailNo" /><Label htmlFor="emailNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.needsBusinessEmails?.message}</p></div>
             )} />
-            {watchNeedsBusinessEmails === 'Yes' && <div><Label htmlFor="businessEmailCount">If yes, how many?</Label><Input id="businessEmailCount" type="number" {...register("businessEmailCount", { valueAsNumber: true })} min="1" disabled={isSubmitting} /><p className="text-destructive text-xs mt-1">{errors.businessEmailCount?.message}</p></div>}
+            {watchNeedsBusinessEmails === 'Yes' && <div><Label htmlFor="businessEmailCount">If yes, how many?</Label><Input id="businessEmailCount" type="number" {...register("businessEmailCount", { valueAsNumber: true, setValueAs: (v) => parseInt(v, 10) || 0 })} min="1" disabled={isSubmitting} /><p className="text-destructive text-xs mt-1">{errors.businessEmailCount?.message}</p></div>}
           </CardContent>
         </Card>
         
