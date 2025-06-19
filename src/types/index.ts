@@ -1,5 +1,6 @@
 
 
+
 export type OrderStatus =
   | 'Pending'
   | 'In Progress'
@@ -135,8 +136,22 @@ export interface OrderFilters {
   searchTerm?: string;
 }
 
+// Define which keys of Order are considered sortable (primitive types suitable for Firestore orderBy)
+export type SortableOrderKey =
+  | 'formattedOrderId'
+  | 'clientName'
+  | 'projectName'
+  | 'projectType'
+  | 'status'
+  | 'deadline' // Firestore sorts ISO strings lexicographically
+  | 'createdDate' // Firestore sorts ISO strings lexicographically (or Timestamps if stored as such)
+  | 'contactEmail'
+  | 'budget'
+  | 'numberOfPages'
+  | 'userEmail';
+
 export interface SortConfig {
-  key: keyof Order | null;
+  key: SortableOrderKey | null; // Use the more restrictive SortableOrderKey
   direction: 'ascending' | 'descending';
 }
 
@@ -170,4 +185,3 @@ export interface FeatureCategory {
 }
 
 export type Currency = 'usd' | 'lkr';
-

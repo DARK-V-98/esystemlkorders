@@ -161,16 +161,12 @@ export default function FillProjectDetailsPage() {
           if (fetchedOrder.projectDetails) {
             Object.entries(fetchedOrder.projectDetails).forEach(([key, value]) => {
                if (key === 'preferredLaunchDate' && typeof value === 'string' && value) {
-                 // Ensure date is correctly parsed for DatePicker if it's already a string
-                 // The DatePicker itself expects a Date object for its `value` prop when setting initially
-                 // but receives and onChange provides ISO string. Our zod schema expects string.
                  setValue(key as keyof ProjectDetailsForm, value as any); 
               } else if (typeof value !== 'undefined') { 
                 setValue(key as keyof ProjectDetailsForm, value as any);
               }
             });
           } else {
-             // Pre-fill some fields from the initial order if projectDetails are not yet submitted
              setValue('contactEmail', fetchedOrder.contactEmail || '');
              setValue('fullName', fetchedOrder.clientName || '');
              setValue('projectBudget', `${fetchedOrder.currencySymbol}${fetchedOrder.budget} ${fetchedOrder.selectedCurrency.toUpperCase()}`);
@@ -192,18 +188,23 @@ export default function FillProjectDetailsPage() {
   const onSubmit: SubmitHandler<ProjectDetailsForm> = async (data) => {
     setIsSubmitting(true);
     try {
-      const orderDocRef = doc(db, 'orders', orderId);
-      // Ensure date is stored as ISO string if present, or undefined
-      const dataToSave = {
-        ...data,
-        preferredLaunchDate: data.preferredLaunchDate ? new Date(data.preferredLaunchDate).toISOString() : undefined,
-      };
-      await updateDoc(orderDocRef, { projectDetails: dataToSave });
-      toast({ title: 'Success', description: 'Project details submitted successfully.' });
-      router.push(`/orders/${orderId}`);
+      // const orderDocRef = doc(db, 'orders', orderId);
+      // const dataToSave = {
+      //   ...data,
+      //   preferredLaunchDate: data.preferredLaunchDate ? new Date(data.preferredLaunchDate).toISOString() : undefined,
+      // };
+      // await updateDoc(orderDocRef, { projectDetails: dataToSave }); // Firestore save REMOVED as per request
+
+      console.log("Form data (not saved to Firestore):", data);
+      toast({ 
+        title: 'Form Submitted (Locally)', 
+        description: 'Project details form was processed but NOT saved to the database.' 
+      });
+      // Decide if you still want to redirect or stay on the page
+      // router.push(`/orders/${orderId}`); 
     } catch (error) {
-      console.error("Error submitting project details:", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to submit project details.' });
+      console.error("Error processing project details form:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to process project details locally.' });
     } finally {
       setIsSubmitting(false);
     }

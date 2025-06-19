@@ -1,8 +1,23 @@
 
-import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SelectedFeatureInOrder, ProjectDetailsForm } from '@/types';
+import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SelectedFeatureInOrder, ProjectDetailsForm, SortableOrderKey } from '@/types';
 import { format } from 'date-fns';
 import { collection, getDocs, doc, getDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
+
+// Helper function to safely convert various date inputs to ISO string
+const safeToISOString = (dateInput: any, defaultToNow: boolean = false): string | undefined => {
+  if (dateInput instanceof Timestamp) {
+    return dateInput.toDate().toISOString();
+  }
+  if (typeof dateInput === 'string' || typeof dateInput === 'number') {
+    const parsedDate = new Date(dateInput);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString();
+    }
+  }
+  return defaultToNow ? new Date().toISOString() : undefined;
+};
+
 
 export async function fetchOrders(
   filters: OrderFilters = {},
@@ -10,12 +25,16 @@ export async function fetchOrders(
 ): Promise<Order[]> {
   try {
     const ordersCollectionRef = collection(db, 'orders');
-    const q = query(ordersCollectionRef, orderBy(sortConfig.key || 'createdDate', sortConfig.direction));
+    // Ensure the sort key is a string and valid for Firestore's orderBy.
+    // 'createdDate' is assumed to be a Firestore Timestamp or a string that Firestore can sort.
+    // Other SortableOrderKey fields are strings or numbers.
+    const firestoreSortKey: string = sortConfig.key || 'createdDate';
+    const q = query(ordersCollectionRef, orderBy(firestoreSortKey, sortConfig.direction));
+    
     const querySnapshot = await getDocs(q);
     
     let fetchedOrders: Order[] = querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
-      const requestedFeatures = Array.isArray(data.requestedFeatures) ? data.requestedFeatures : [];
       
       return {
         id: docSnapshot.id,
@@ -25,18 +44,18 @@ export async function fetchOrders(
         projectType: data.projectType || 'Custom Build',
         status: data.status || 'Pending',
         description: data.description || '',
-        requestedFeatures: requestedFeatures as SelectedFeatureInOrder[],
-        createdDate: data.createdDate instanceof Timestamp ? data.createdDate.toDate().toISOString() : (data.createdDate || new Date().toISOString()),
-        deadline: data.deadline instanceof Timestamp ? data.deadline.toDate().toISOString() : data.deadline,
+        requestedFeatures: (Array.isArray(data.requestedFeatures) ? data.requestedFeatures : []) as SelectedFeatureInOrder[],
+        createdDate: safeToISOString(data.createdDate, true)!, // Default to now if invalid/missing
+        deadline: safeToISOString(data.deadline),
         contactEmail: data.contactEmail || 'N/A',
-        budget: data.budget || 0,
-        numberOfPages: data.numberOfPages || 0,
+        budget: typeof data.budget === 'number' ? data.budget : 0,
+        numberOfPages: typeof data.numberOfPages === 'number' ? data.numberOfPages : 0,
         selectedCurrency: data.selectedCurrency || 'usd',
         currencySymbol: data.currencySymbol || '$',
         userEmail: data.userEmail || 'N/A',
-        domain: data.domain,
-        hostingDetails: data.hostingDetails,
-        projectDetails: data.projectDetails as ProjectDetailsForm | undefined, // Ensure this is mapped
+        domain: data.domain || undefined,
+        hostingDetails: data.hostingDetails || undefined,
+        projectDetails: data.projectDetails as ProjectDetailsForm | undefined, 
       } as Order;
     });
 
@@ -50,15 +69,17 @@ export async function fetchOrders(
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
       fetchedOrders = fetchedOrders.filter(order =>
-        order.clientName.toLowerCase().includes(term) ||
-        order.projectName.toLowerCase().includes(term) ||
-        order.formattedOrderId.toLowerCase().includes(term)
+        (order.clientName || '').toLowerCase().includes(term) ||
+        (order.projectName || '').toLowerCase().includes(term) ||
+        (order.formattedOrderId || '').toLowerCase().includes(term)
       );
     }
     return fetchedOrders;
 
   } catch (error) {
     console.error("Error fetching orders from Firestore:", error);
+    // Advise checking Firestore console for index creation links.
+    // The error message often includes a link to create missing indexes.
     return [];
   }
 }
@@ -70,7 +91,6 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      const requestedFeatures = Array.isArray(data.requestedFeatures) ? data.requestedFeatures : [];
 
       return {
         id: docSnap.id,
@@ -80,18 +100,18 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
         projectType: data.projectType || 'Custom Build',
         status: data.status || 'Pending',
         description: data.description || '',
-        requestedFeatures: requestedFeatures as SelectedFeatureInOrder[],
-        createdDate: data.createdDate instanceof Timestamp ? data.createdDate.toDate().toISOString() : (data.createdDate || new Date().toISOString()),
-        deadline: data.deadline instanceof Timestamp ? data.deadline.toDate().toISOString() : data.deadline,
+        requestedFeatures: (Array.isArray(data.requestedFeatures) ? data.requestedFeatures : []) as SelectedFeatureInOrder[],
+        createdDate: safeToISOString(data.createdDate, true)!, // Default to now if invalid/missing
+        deadline: safeToISOString(data.deadline),
         contactEmail: data.contactEmail || 'N/A',
-        budget: data.budget || 0,
-        numberOfPages: data.numberOfPages || 0,
+        budget: typeof data.budget === 'number' ? data.budget : 0,
+        numberOfPages: typeof data.numberOfPages === 'number' ? data.numberOfPages : 0,
         selectedCurrency: data.selectedCurrency || 'usd',
         currencySymbol: data.currencySymbol || '$',
         userEmail: data.userEmail || 'N/A',
-        domain: data.domain,
-        hostingDetails: data.hostingDetails,
-        projectDetails: data.projectDetails as ProjectDetailsForm | undefined, // Ensure this is mapped
+        domain: data.domain || undefined,
+        hostingDetails: data.hostingDetails || undefined,
+        projectDetails: data.projectDetails as ProjectDetailsForm | undefined,
       } as Order;
     } else {
       console.log("No such order document!");
@@ -116,20 +136,16 @@ export const ORDER_STATUSES: OrderStatus[] = [
   'Rejected',
 ];
 
-export function formatDate(dateString: string | undefined | null, dateFormat: string = 'PPP'): string {
-  if (!dateString) return 'N/A';
+export function formatDate(dateInput: string | number | Date | undefined | null, dateFormat: string = 'PPP'): string {
+  if (!dateInput) return 'N/A';
   try {
-    const date = new Date(dateString);
-    // Check if date is Invalid Date
+    const date = new Date(dateInput); // Works for ISO strings, epoch numbers, and Date objects
     if (isNaN(date.getTime())) { 
-      // Attempt to parse if it's a number string (timestamp)
-      const numDate = new Date(Number(dateString));
-      if(isNaN(numDate.getTime())) return 'Invalid Date'; // Still invalid
-      return format(numDate, dateFormat);
+      return 'Invalid Date';
     }
     return format(date, dateFormat);
   } catch (error) {
-    console.error("Error formatting date:", error, "Input was:", dateString);
-    return 'Invalid Date Format'; // More specific error message
+    console.error("Error formatting date:", error, "Input was:", dateInput);
+    return 'Invalid Date Format';
   }
 }

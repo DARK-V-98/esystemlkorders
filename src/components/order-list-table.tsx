@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -26,7 +27,7 @@ import {
   Search,
   ListFilter,
 } from "lucide-react";
-import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig } from "@/types";
+import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SortableOrderKey } from "@/types";
 import { OrderStatusBadge } from "./order-status-badge";
 import { formatDate, ORDER_STATUSES, PROJECT_TYPES } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,6 +84,8 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
           else if (valB === undefined || valB === null) comparison = 1;
           else if (typeof valA === 'string' && typeof valB === 'string') { // Add string comparison for IDs
             comparison = valA.localeCompare(valB);
+          } else if (typeof valA === 'number' && typeof valB === 'number') {
+            comparison = valA - valB;
           } else if (valA > valB) {
             comparison = 1;
           } else if (valA < valB) {
@@ -98,7 +101,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
   }, [filters, sortConfig, initialOrders]);
 
 
-  const handleSort = (key: keyof Order) => {
+  const handleSort = (key: SortableOrderKey) => {
     let direction: "ascending" | "descending" = "ascending";
     if (sortConfig.key === key && sortConfig.direction === "ascending") {
       direction = "descending";
@@ -116,7 +119,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
   };
 
 
-  const renderSortIcon = (key: keyof Order) => {
+  const renderSortIcon = (key: SortableOrderKey) => {
     if (sortConfig.key === key) {
       return sortConfig.direction === "ascending" ? " ↑" : " ↓";
     }
