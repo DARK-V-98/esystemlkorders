@@ -9,16 +9,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, ListChecks, ListOrdered, CheckSquare, Search, ExternalLink } from "lucide-react";
+import { 
+  ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, 
+  ListChecks, ListOrdered, CheckSquare, Search, ExternalLink, XCircle, Settings, Clock, 
+  MoreVertical, PauseCircle, PlayCircle, Trash2 
+} from "lucide-react";
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc, Timestamp, query, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import { DEFAULT_FEATURE_CATEGORIES, DEFAULT_PRICE_PER_PAGE, type FeatureCategory, type FeatureOption, type Price } from '@/app/custom-website/page';
 import { DynamicIcon } from '@/components/icons';
-import type { Order } from '@/types';
+import type { Order, OrderStatus } from '@/types';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { formatDate } from "@/lib/data";
 import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 
 const FEATURES_COLLECTION = 'siteFeaturesConfig';
 const GLOBAL_PRICING_COLLECTION = 'siteGlobalConfig';
@@ -241,7 +254,7 @@ function AdminOrdersManagement() {
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [adminSearchTerm, setAdminSearchTerm] = useState('');
   const { toast } = useToast();
 
@@ -261,7 +274,7 @@ function AdminOrdersManagement() {
         } as Order;
       });
       setAllOrders(fetchedOrders);
-      setFilteredOrders(fetchedOrders); // Initialize filteredOrders with all orders
+      setFilteredOrders(fetchedOrders); 
     } catch (error) {
       console.error("Error fetching orders for admin:", error);
       toast({ variant: "destructive", title: "Fetch Error", description: "Could not load orders." });
@@ -275,7 +288,6 @@ function AdminOrdersManagement() {
   }, []);
 
   useEffect(() => {
-    // Filter orders based on adminSearchTerm
     if (adminSearchTerm === '') {
       setFilteredOrders(allOrders);
     } else {
@@ -288,18 +300,15 @@ function AdminOrdersManagement() {
   }, [adminSearchTerm, allOrders]);
 
 
-  const handleConfirmOrder = async (orderId: string, formattedOrderId: string) => {
-    setConfirmingOrderId(orderId); 
+  const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus, formattedOrderId: string) => {
+    setUpdatingOrderId(orderId); 
     try {
       const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
-      await updateDoc(orderDocRef, {
-        status: "In Progress" 
-      });
-      toast({ title: "Order Confirmed", description: `Order ${formattedOrderId} status updated to In Progress.` });
-      // Refresh orders list or update local state
-      const updatedOrders = allOrders.map(o => o.id === orderId ? {...o, status: "In Progress"} : o);
+      await updateDoc(orderDocRef, { status: newStatus });
+      toast({ title: "Order Status Updated", description: `Order ${formattedOrderId} status changed to ${newStatus}.` });
+      
+      const updatedOrders = allOrders.map(o => o.id === orderId ? {...o, status: newStatus} : o);
       setAllOrders(updatedOrders);
-      // Re-apply search filter to the updated list
       setFilteredOrders(
         updatedOrders.filter(order =>
           order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase()) || adminSearchTerm === ''
@@ -307,12 +316,32 @@ function AdminOrdersManagement() {
       );
 
     } catch (error) {
-      console.error("Error confirming order:", error);
-      toast({ variant: "destructive", title: "Confirmation Error", description: `Could not confirm order ${formattedOrderId}.` });
+      console.error(`Error updating order ${formattedOrderId} to ${newStatus}:`, error);
+      toast({ variant: "destructive", title: "Update Error", description: `Could not update order ${formattedOrderId}.` });
     } finally {
-      setConfirmingOrderId(null);
+      setUpdatingOrderId(null);
     }
   };
+
+  const availableActions: Array<{
+    label: string;
+    newStatus: OrderStatus;
+    icon: React.ElementType;
+    className?: string;
+    allowedCurrentStatuses?: OrderStatus[]; // If undefined, allowed for most active states
+  }> = [
+    { label: "Mark as In Progress", newStatus: "In Progress", icon: PlayCircle, allowedCurrentStatuses: ["Pending", "Suspended", "Developing", "Waiting for Payment", "Review"] },
+    { label: "Mark as Developing", newStatus: "Developing", icon: Settings, allowedCurrentStatuses: ["In Progress", "Waiting for Payment", "Suspended", "Review"] },
+    { label: "Request Payment", newStatus: "Waiting for Payment", icon: Clock, allowedCurrentStatuses: ["In Progress", "Developing", "Suspended", "Review"] },
+    { label: "Send for Review", newStatus: "Review", icon: ListChecks, allowedCurrentStatuses: ["In Progress", "Developing"] },
+    { label: "Mark as Completed", newStatus: "Completed", icon: CheckCircle2, className:"text-green-600", allowedCurrentStatuses: ["In Progress", "Developing", "Waiting for Payment", "Review"] },
+    { label: "Suspend Project", newStatus: "Suspended", icon: PauseCircle, className:"text-orange-600", allowedCurrentStatuses: ["In Progress", "Developing", "Waiting for Payment", "Review"] },
+    { label: "Cancel Order", newStatus: "Cancelled", icon: Trash2, className:"text-red-600", allowedCurrentStatuses: ["Pending", "In Progress", "Developing", "Waiting for Payment", "Review", "Suspended"] },
+    { label: "Reject Order", newStatus: "Rejected", icon: XCircle, className:"text-pink-700", allowedCurrentStatuses: ["Pending"] },
+  ];
+  
+  const terminalStatuses: OrderStatus[] = ["Completed", "Cancelled", "Rejected"];
+
 
   if (isLoading) {
     return (
@@ -329,7 +358,7 @@ function AdminOrdersManagement() {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex-grow">
                 <CardTitle className="flex items-center"><ListOrdered className="mr-2 h-5 w-5 text-primary" />Manage Client Orders</CardTitle>
-                <CardDescription>Review and confirm incoming project orders.</CardDescription>
+                <CardDescription>Review and update project order statuses.</CardDescription>
             </div>
             <div className="relative w-full sm:w-auto sm:max-w-xs">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -370,23 +399,66 @@ function AdminOrdersManagement() {
                     <TableCell>{order.projectName}</TableCell>
                     <TableCell><OrderStatusBadge status={order.status} /></TableCell>
                     <TableCell>{formatDate(order.createdDate, 'PPp')}</TableCell>
-                    <TableCell className="text-right space-x-2">
+                    <TableCell className="text-right space-x-1">
                       <Button asChild variant="outline" size="sm">
                         <Link href={`/orders/${order.id}`}>
-                          View <ExternalLink className="ml-2 h-3 w-3" />
+                          View <ExternalLink className="ml-1.5 h-3 w-3" />
                         </Link>
                       </Button>
-                      {order.status === 'Pending' && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleConfirmOrder(order.id, order.formattedOrderId)}
-                          disabled={confirmingOrderId === order.id}
-                          variant="default"
-                          className="bg-green-500 hover:bg-green-600"
-                        >
-                          {confirmingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
-                          Confirm
-                        </Button>
+                      {!terminalStatuses.includes(order.status) && (
+                        <>
+                          {order.status === 'Pending' && (
+                            <>
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleUpdateStatus(order.id, "In Progress", order.formattedOrderId)}
+                                disabled={updatingOrderId === order.id}
+                                className="bg-green-500 hover:bg-green-600"
+                              >
+                                {updatingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-1.5 h-4 w-4" />}
+                                Confirm
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => handleUpdateStatus(order.id, "Rejected", order.formattedOrderId)}
+                                disabled={updatingOrderId === order.id}
+                                className="bg-pink-700 hover:bg-pink-800"
+                              >
+                                {updatingOrderId === order.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-1.5 h-4 w-4" />}
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {order.status !== 'Pending' && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" disabled={updatingOrderId === order.id}>
+                                  {updatingOrderId === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                                   <span className="sr-only">Update Status</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {availableActions
+                                  .filter(action => action.newStatus !== order.status) // Don't show current status as an option
+                                  .filter(action => action.allowedCurrentStatuses?.includes(order.status) && action.newStatus !== "Rejected") // Filter for allowed transitions
+                                  .map(action => (
+                                  <DropdownMenuItem
+                                    key={action.newStatus}
+                                    onClick={() => handleUpdateStatus(order.id, action.newStatus, order.formattedOrderId)}
+                                    disabled={updatingOrderId === order.id}
+                                    className={action.className}
+                                  >
+                                    <action.icon className="mr-2 h-4 w-4" />
+                                    {action.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </>
                       )}
                     </TableCell>
                   </TableRow>

@@ -126,7 +126,17 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
 }
 
 export const PROJECT_TYPES: ProjectType[] = ['New Website', 'Redesign', 'Feature Enhancement', 'Maintenance', 'Custom Build'];
-export const ORDER_STATUSES: OrderStatus[] = ['Pending', 'In Progress', 'Review', 'Completed', 'Cancelled'];
+export const ORDER_STATUSES: OrderStatus[] = [
+  'Pending', 
+  'In Progress', 
+  'Developing',
+  'Waiting for Payment',
+  'Review', 
+  'Completed', 
+  'Suspended',
+  'Cancelled',
+  'Rejected',
+];
 
 export function formatDate(dateString: string | undefined | null, dateFormat: string = 'PPP'): string {
   if (!dateString) return 'N/A';
@@ -144,3 +154,4 @@ export function formatDate(dateString: string | undefined | null, dateFormat: st
     return 'Invalid Date';
   }
 }
+

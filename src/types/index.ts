@@ -1,5 +1,15 @@
 
-export type OrderStatus = 'Pending' | 'In Progress' | 'Review' | 'Completed' | 'Cancelled';
+export type OrderStatus = 
+  | 'Pending' 
+  | 'In Progress' 
+  | 'Review' 
+  | 'Completed' 
+  | 'Cancelled'
+  | 'Rejected'       // New
+  | 'Developing'     // New
+  | 'Waiting for Payment' // New
+  | 'Suspended';     // New
+
 export type ProjectType = 'New Website' | 'Redesign' | 'Feature Enhancement' | 'Maintenance' | 'Custom Build'; // Added 'Custom Build'
 
 // For custom website form
@@ -84,3 +94,4 @@ export interface FeatureCategory {
 
 // For currency context
 export type Currency = 'usd' | 'lkr';
+
