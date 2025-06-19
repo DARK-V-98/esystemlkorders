@@ -328,19 +328,19 @@ function AdminOrdersManagement() {
     newStatus: OrderStatus;
     icon: React.ElementType;
     className?: string;
-    allowedCurrentStatuses?: OrderStatus[]; // If undefined, allowed for most active states
+    allowedCurrentStatuses?: OrderStatus[]; 
   }> = [
-    { label: "Mark as In Progress", newStatus: "In Progress", icon: PlayCircle, allowedCurrentStatuses: ["Pending", "Suspended", "Developing", "Waiting for Payment", "Review"] },
-    { label: "Mark as Developing", newStatus: "Developing", icon: Settings, allowedCurrentStatuses: ["In Progress", "Waiting for Payment", "Suspended", "Review"] },
-    { label: "Request Payment", newStatus: "Waiting for Payment", icon: Clock, allowedCurrentStatuses: ["In Progress", "Developing", "Suspended", "Review"] },
-    { label: "Send for Review", newStatus: "Review", icon: ListChecks, allowedCurrentStatuses: ["In Progress", "Developing"] },
+    { label: "Mark as In Progress", newStatus: "In Progress", icon: PlayCircle, allowedCurrentStatuses: ["Pending", "Suspended", "Developing", "Waiting for Payment", "Review", "Completed"] },
+    { label: "Mark as Developing", newStatus: "Developing", icon: Settings, allowedCurrentStatuses: ["In Progress", "Waiting for Payment", "Suspended", "Review", "Completed"] },
+    { label: "Request Payment", newStatus: "Waiting for Payment", icon: Clock, allowedCurrentStatuses: ["In Progress", "Developing", "Suspended", "Review"] }, // Typically not from completed
+    { label: "Send for Review", newStatus: "Review", icon: ListChecks, allowedCurrentStatuses: ["In Progress", "Developing", "Completed"] },
     { label: "Mark as Completed", newStatus: "Completed", icon: CheckCircle2, className:"text-green-600", allowedCurrentStatuses: ["In Progress", "Developing", "Waiting for Payment", "Review"] },
-    { label: "Suspend Project", newStatus: "Suspended", icon: PauseCircle, className:"text-orange-600", allowedCurrentStatuses: ["In Progress", "Developing", "Waiting for Payment", "Review"] },
-    { label: "Cancel Order", newStatus: "Cancelled", icon: Trash2, className:"text-red-600", allowedCurrentStatuses: ["Pending", "In Progress", "Developing", "Waiting for Payment", "Review", "Suspended"] },
+    { label: "Suspend Project", newStatus: "Suspended", icon: PauseCircle, className:"text-orange-600", allowedCurrentStatuses: ["In Progress", "Developing", "Waiting for Payment", "Review", "Completed"] },
+    { label: "Cancel Order", newStatus: "Cancelled", icon: Trash2, className:"text-red-600", allowedCurrentStatuses: ["Pending", "In Progress", "Developing", "Waiting for Payment", "Review", "Suspended", "Completed"] },
     { label: "Reject Order", newStatus: "Rejected", icon: XCircle, className:"text-pink-700", allowedCurrentStatuses: ["Pending"] },
   ];
   
-  const terminalStatuses: OrderStatus[] = ["Completed", "Cancelled", "Rejected"];
+  const terminalStatuses: OrderStatus[] = ["Cancelled", "Rejected"];
 
 
   if (isLoading) {
@@ -442,8 +442,8 @@ function AdminOrdersManagement() {
                                 <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {availableActions
-                                  .filter(action => action.newStatus !== order.status) // Don't show current status as an option
-                                  .filter(action => action.allowedCurrentStatuses?.includes(order.status) && action.newStatus !== "Rejected") // Filter for allowed transitions
+                                  .filter(action => action.newStatus !== order.status) 
+                                  .filter(action => action.allowedCurrentStatuses?.includes(order.status) && action.newStatus !== "Rejected") 
                                   .map(action => (
                                   <DropdownMenuItem
                                     key={action.newStatus}
@@ -630,5 +630,3 @@ export default function AdminConsolePage() {
     </div>
   );
 }
-
-      
