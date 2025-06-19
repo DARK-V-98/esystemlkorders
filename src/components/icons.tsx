@@ -4,7 +4,8 @@
 import type { LucideIcon, LucideProps } from 'lucide-react';
 import { 
   Palette, Server, Settings, Smartphone, DollarSign, Briefcase, User, Mail, 
-  FileText, BarChart3, CreditCard, Users, ShieldCheck, MapPin, DatabaseZap, FileStack 
+  FileText, BarChart3, CreditCard, Users, ShieldCheck, MapPin, DatabaseZap, FileStack,
+  Tag // Added Tag
 } from 'lucide-react';
 
 // Add any other icons you use here
@@ -25,6 +26,7 @@ export const iconMap: { [key: string]: LucideIcon } = {
   MapPin,
   DatabaseZap,
   FileStack,
+  Tag, // Mapped Tag
   // Default/fallback icon if needed
   // DefaultIcon: Settings, 
 };
@@ -38,8 +40,10 @@ export const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
     // Optionally return a default icon or null
     // const FallbackIcon = iconMap['DefaultIcon'] || Settings;
     // return <FallbackIcon {...props} />;
+    console.warn(`DynamicIcon: Icon "${name}" not found in iconMap. Rendering null.`);
     return null;
   }
   const IconComponent = iconMap[name];
   return <IconComponent {...props} />;
 };
+
