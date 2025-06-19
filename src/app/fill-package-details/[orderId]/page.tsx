@@ -44,7 +44,7 @@ interface AddonConfig {
     'featureBooking' | 'featureBlog' | 'featureFileDownloads' | 'featureChatSupport'
   >;
   name: string;
-  price: Price; // {lkr, usd}
+  price: Price; 
 }
 
 export const ADDON_FEATURES_CONFIG: AddonConfig[] = [
@@ -98,9 +98,8 @@ const packageDetailsSchema = z.object({
   featureFileDownloads: z.boolean().optional().default(false),
   featureChatSupport: z.boolean().optional().default(false),
   otherFeatures: z.string().optional(),
-
-  // Budget - this will be populated by calculation
-  budgetRange: z.string().optional(), // For displaying the calculated total
+  
+  budgetRange: z.string().optional(), 
 
   // Notes
   businessGoalsSpecialNeeds: z.string().optional(),
@@ -527,4 +526,4 @@ export default function FillPackageDetailsPage() {
     </div>
   );
 }
-
+    
