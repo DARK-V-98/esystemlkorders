@@ -330,17 +330,17 @@ function AdminOrdersManagement() {
     className?: string;
     allowedCurrentStatuses?: OrderStatus[]; 
   }> = [
-    { label: "Mark as In Progress", newStatus: "In Progress", icon: PlayCircle, allowedCurrentStatuses: ["Pending", "Suspended", "Developing", "Waiting for Payment", "Review", "Completed"] },
+    { label: "Mark as In Progress", newStatus: "In Progress", icon: PlayCircle, allowedCurrentStatuses: ["Pending", "Suspended", "Developing", "Waiting for Payment", "Review", "Completed", "Rejected"] },
     { label: "Mark as Developing", newStatus: "Developing", icon: Settings, allowedCurrentStatuses: ["In Progress", "Waiting for Payment", "Suspended", "Review", "Completed"] },
-    { label: "Request Payment", newStatus: "Waiting for Payment", icon: Clock, allowedCurrentStatuses: ["In Progress", "Developing", "Suspended", "Review"] }, // Typically not from completed
+    { label: "Request Payment", newStatus: "Waiting for Payment", icon: Clock, allowedCurrentStatuses: ["In Progress", "Developing", "Suspended", "Review"] },
     { label: "Send for Review", newStatus: "Review", icon: ListChecks, allowedCurrentStatuses: ["In Progress", "Developing", "Completed"] },
     { label: "Mark as Completed", newStatus: "Completed", icon: CheckCircle2, className:"text-green-600", allowedCurrentStatuses: ["In Progress", "Developing", "Waiting for Payment", "Review"] },
-    { label: "Suspend Project", newStatus: "Suspended", icon: PauseCircle, className:"text-orange-600", allowedCurrentStatuses: ["In Progress", "Developing", "Waiting for Payment", "Review", "Completed"] },
-    { label: "Cancel Order", newStatus: "Cancelled", icon: Trash2, className:"text-red-600", allowedCurrentStatuses: ["Pending", "In Progress", "Developing", "Waiting for Payment", "Review", "Suspended", "Completed"] },
+    { label: "Suspend Project", newStatus: "Suspended", icon: PauseCircle, className:"text-orange-600", allowedCurrentStatuses: ["In Progress", "Developing", "Waiting for Payment", "Review", "Completed", "Rejected"] },
+    { label: "Cancel Order", newStatus: "Cancelled", icon: Trash2, className:"text-red-600", allowedCurrentStatuses: ["Pending", "In Progress", "Developing", "Waiting for Payment", "Review", "Suspended", "Completed", "Rejected"] },
     { label: "Reject Order", newStatus: "Rejected", icon: XCircle, className:"text-pink-700", allowedCurrentStatuses: ["Pending"] },
   ];
   
-  const terminalStatuses: OrderStatus[] = ["Cancelled", "Rejected"];
+  const terminalStatuses: OrderStatus[] = ["Cancelled"];
 
 
   if (isLoading) {
@@ -630,3 +630,6 @@ export default function AdminConsolePage() {
     </div>
   );
 }
+
+
+    
