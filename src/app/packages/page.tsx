@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2, ExternalLink, ShieldCheck, Settings as SettingsIcon } from "lucide-react"; // Added ShieldCheck, SettingsIcon
+import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2, ExternalLink, ShieldCheck, Settings as SettingsIcon } from "lucide-react";
 import { useCurrency } from '@/contexts/currency-context';
 import { DynamicIcon } from '@/components/icons';
 import {
@@ -33,12 +33,14 @@ interface PackageInfo {
   priceLKR: number;
   priceDisplay: string;
   features: string[];
-  iconName: string; // DynamicIcon will use this
+  iconName: string;
   actionText: string;
   highlight?: boolean;
   isCustom?: boolean;
   estimatedPages?: number;
 }
+
+const commonFeature = "Basic Technical Support";
 
 const packagesData: PackageInfo[] = [
   // Budget Packs
@@ -48,7 +50,7 @@ const packagesData: PackageInfo[] = [
     description: 'An essential package to get your presence online quickly and effectively.',
     priceLKR: 15000,
     priceDisplay: `Rs. 15,000`,
-    features: ['Basic 3-Page Design', 'Mobile Responsive', 'Contact Form', 'Social Media Links'],
+    features: ['Basic 3-Page Design', 'Mobile Responsive', 'Contact Form', 'Social Media Links', commonFeature],
     iconName: 'Tag',
     actionText: 'Order Starter Pack',
     estimatedPages: 3,
@@ -59,7 +61,7 @@ const packagesData: PackageInfo[] = [
     description: 'More features to help your business grow and engage with customers.',
     priceLKR: 30000,
     priceDisplay: `Rs. 30,000`,
-    features: ['Up to 5 Pages', 'Custom Design Elements', 'Basic SEO Setup', 'Blog Integration'],
+    features: ['Up to 5 Pages', 'Custom Design Elements', 'Basic SEO Setup', 'Blog Integration', commonFeature],
     iconName: 'Tag',
     actionText: 'Order Growth Pack',
     estimatedPages: 5,
@@ -70,7 +72,7 @@ const packagesData: PackageInfo[] = [
     description: 'A comprehensive solution for established businesses looking for a robust online platform.',
     priceLKR: 50000,
     priceDisplay: `Rs. 50,000`,
-    features: ['Up to 10 Pages', 'Advanced UI/UX', 'Basic E-commerce Ready', 'Analytics Integration'],
+    features: ['Up to 10 Pages', 'Advanced UI/UX', 'Basic E-commerce Ready', 'Analytics Integration', commonFeature],
     iconName: 'Tag',
     actionText: 'Order Pro Pack',
     estimatedPages: 10,
@@ -82,7 +84,7 @@ const packagesData: PackageInfo[] = [
     description: 'Enhanced design and more pages for growing businesses.',
     priceLKR: 75000,
     priceDisplay: `Rs. 75,000`,
-    features: ['Up to 12 Pages', 'Enhanced UI/UX Design', 'Basic SEO Setup', 'Blog Setup', 'Basic Content Writing Aid'],
+    features: ['Up to 12 Pages', 'Enhanced UI/UX Design', 'Basic SEO Setup', 'Blog Setup', 'Basic Content Writing Aid', commonFeature],
     iconName: 'ShieldCheck',
     actionText: 'Order Silver Starter',
     estimatedPages: 12,
@@ -93,7 +95,7 @@ const packagesData: PackageInfo[] = [
     description: 'A balanced package with advanced features and marketing tools.',
     priceLKR: 100000,
     priceDisplay: `Rs. 100,000`,
-    features: ['Up to 15 Pages', 'Advanced UI/UX', 'Advanced SEO Package', 'Social Media Integration (Full)', 'Logo Design Concept'],
+    features: ['Up to 15 Pages', 'Advanced UI/UX', 'Advanced SEO Package', 'Social Media Integration (Full)', 'Logo Design Concept', commonFeature],
     iconName: 'ShieldCheck',
     actionText: 'Order Silver Plus',
     highlight: true,
@@ -105,7 +107,7 @@ const packagesData: PackageInfo[] = [
     description: 'Comprehensive silver tier solution with e-commerce capabilities.',
     priceLKR: 130000,
     priceDisplay: `Rs. 130,000`,
-    features: ['Up to 20 Pages', 'Premium UI/UX Design', 'Full SEO & Analytics', 'Standard E-commerce Setup', 'Newsletter Integration'],
+    features: ['Up to 20 Pages', 'Premium UI/UX Design', 'Full SEO & Analytics', 'Standard E-commerce Setup', 'Newsletter Integration', commonFeature],
     iconName: 'ShieldCheck',
     actionText: 'Order Silver Premium',
     estimatedPages: 20,
@@ -117,8 +119,8 @@ const packagesData: PackageInfo[] = [
     description: 'Top-tier features for businesses aiming for market leadership.',
     priceLKR: 180000,
     priceDisplay: `Rs. 180,000`,
-    features: ['Up to 25 Pages', 'Bespoke Design System', 'Full E-commerce Suite', 'Dedicated Project Manager (Light)', 'Content Strategy'],
-    iconName: 'Settings', // Using SettingsIcon for Gold
+    features: ['Up to 25 Pages', 'Bespoke Design System', 'Full E-commerce Suite', 'Dedicated Project Manager (Light)', 'Content Strategy', commonFeature],
+    iconName: 'Settings', 
     actionText: 'Order Gold Essential',
     estimatedPages: 25,
   },
@@ -128,8 +130,8 @@ const packagesData: PackageInfo[] = [
     description: 'Advanced solutions including custom integrations and reporting.',
     priceLKR: 250000,
     priceDisplay: `Rs. 250,000`,
-    features: ['Up to 30 Pages', 'Personalized UI/UX Workshop', 'Advanced E-commerce & Payments', 'Custom API Integrations (1-2)', 'Advanced Analytics & Reporting'],
-    iconName: 'Settings', // Using SettingsIcon for Gold
+    features: ['Up to 30 Pages', 'Personalized UI/UX Workshop', 'Advanced E-commerce & Payments', 'Custom API Integrations (1-2)', 'Advanced Analytics & Reporting', commonFeature],
+    iconName: 'Settings', 
     actionText: 'Order Gold Advanced',
     estimatedPages: 30,
   },
@@ -139,18 +141,18 @@ const packagesData: PackageInfo[] = [
     description: 'The ultimate package for a dominant online presence and performance.',
     priceLKR: 350000,
     priceDisplay: `Rs. 350,000`,
-    features: ['30+ Pages & Scalable Architecture', 'Full Branding Suite (Logo, Guidelines)', 'Premium E-commerce & Custom Features', 'Performance Optimization & Security Suite', 'Priority Support & Training Session'],
-    iconName: 'Settings', // Using SettingsIcon for Gold
+    features: ['30+ Pages & Scalable Architecture', 'Full Branding Suite (Logo, Guidelines)', 'Premium E-commerce & Custom Features', 'Performance Optimization & Security Suite', 'Priority Support & Training Session', commonFeature],
+    iconName: 'Settings', 
     actionText: 'Order Gold Ultimate',
     highlight: true,
-    estimatedPages: 35, // Estimate, can be more
+    estimatedPages: 35,
   },
   // Custom Package
   {
     id: 'custom-package',
     title: 'Make Your Custom Package',
     description: 'Tailor a website to your exact needs. Choose features, pages, and design elements with our interactive builder.',
-    priceLKR: 0, // Dynamic
+    priceLKR: 0,
     priceDisplay: 'Dynamic Pricing',
     features: ['Fully Customizable', 'Interactive Builder', 'Personalized Quote', 'Scalable Solution'],
     iconName: 'Palette',
@@ -160,7 +162,7 @@ const packagesData: PackageInfo[] = [
 ];
 
 export default function PackagesPage() {
-  const { currencySymbol, selectedCurrency } = useCurrency(); // currency context not used for these LKR-only packages
+  const { currencySymbol, selectedCurrency } = useCurrency();
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState<PackageInfo | null>(null);
@@ -182,9 +184,9 @@ export default function PackagesPage() {
 
     const formattedOrderId = generateFormattedOrderId();
     const orderFeatures: SelectedFeatureInOrder[] = selectedPackage.features.map(featureName => ({
-      id: featureName.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''), // Sanitize ID
+      id: featureName.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
       name: featureName,
-      price: 0, // Price is package-level, features are inclusive
+      price: 0, 
       currency: 'lkr',
       currencySymbol: 'Rs.',
     }));
@@ -193,7 +195,7 @@ export default function PackagesPage() {
       formattedOrderId: formattedOrderId,
       clientName: user.displayName || user.email || 'N/A',
       projectName: selectedPackage.title,
-      projectType: 'Budget Package', // All predefined packages use this type, form handles specifics
+      projectType: 'Budget Package', 
       status: 'Pending',
       paymentStatus: 'Not Paid',
       description: selectedPackage.description,
@@ -250,6 +252,9 @@ export default function PackagesPage() {
           </div>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Choose from our expertly crafted packages or build your own custom solution to perfectly fit your needs.
+          </p>
+          <p className="text-muted-foreground text-md max-w-2xl mx-auto mt-2">
+            All of these packages include many more features. Contact eSystemLK for full details.
           </p>
         </header>
 
@@ -327,4 +332,3 @@ export default function PackagesPage() {
   );
 }
 
-    
