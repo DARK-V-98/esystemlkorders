@@ -301,14 +301,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     <CardContent className="space-y-3">
                         <p className="text-sm text-foreground">Please make your payment to the following bank account:</p>
                         <div className="p-3 bg-background/50 rounded-md border text-sm">
-                            <p><strong>Bank Name:</strong> Example Bank PLC</p>
-                            <p><strong>Account Name:</strong> eSystemLK Gateway Solutions</p>
-                            <p><strong>Account Number:</strong> 123-456-7890</p>
-                            <p><strong>Branch:</strong> Main Branch, Colombo</p>
-                            <p><strong>SWIFT Code (BIC):</strong> EXMPLKLC (For international transfers)</p>
-                            <p className="mt-2 text-xs text-muted-foreground">
+                            <p><strong>Bank Name:</strong> People’s bank</p>
+                            <p><strong>Account Name:</strong> thimira vishwa vidarshana</p>
+                            <p><strong>Account Number:</strong> 174-2-001-0-0023985</p>
+                            <p><strong>Branch:</strong> Nugegoda Branch</p>
+                            {/* <p><strong>SWIFT Code (BIC):</strong> EXMPLKLC (For international transfers)</p> */}
+                            {/* <p className="mt-2 text-xs text-muted-foreground">
                                 IMPORTANT: Please replace the above with your actual bank details.
-                            </p>
+                            </p> */}
                         </div>
                         <p className="text-sm text-foreground mt-3">
                             After making the payment, please send a clear photo or screenshot of your payment receipt to our WhatsApp number.
@@ -558,3 +558,4 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     </div>
   );
 }
+
