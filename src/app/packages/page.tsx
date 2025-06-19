@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2 } from "lucide-react";
+import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2, ExternalLink } from "lucide-react"; // Added ExternalLink
 import { useCurrency } from '@/contexts/currency-context';
 import { DynamicIcon } from '@/components/icons';
 import {
@@ -22,7 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, type DocumentReference } from 'firebase/firestore';
 import { generateFormattedOrderId } from '@/lib/utils';
 import type { Order, SelectedFeatureInOrder } from '@/types';
 
@@ -36,8 +36,8 @@ interface PackageInfo {
   iconName: string; 
   actionText: string;
   highlight?: boolean;
-  isCustom?: boolean; // To differentiate the custom package link
-  estimatedPages?: number; // For order creation
+  isCustom?: boolean; 
+  estimatedPages?: number; 
 }
 
 const packagesData: PackageInfo[] = [
@@ -103,7 +103,7 @@ export default function PackagesPage() {
         title: "Login Required",
         description: "Please log in to order a package.",
       });
-      setSelectedPackage(null); // Close dialog
+      setSelectedPackage(null); 
       return;
     }
 
@@ -111,14 +111,14 @@ export default function PackagesPage() {
 
     const formattedOrderId = generateFormattedOrderId();
     const orderFeatures: SelectedFeatureInOrder[] = selectedPackage.features.map(featureName => ({
-      id: featureName.toLowerCase().replace(/\s+/g, '-'), // simple id generation
+      id: featureName.toLowerCase().replace(/\s+/g, '-'), 
       name: featureName,
-      price: 0, // Individual feature price is not applicable here, package price is budget
+      price: 0, 
       currency: 'lkr',
       currencySymbol: 'Rs.',
     }));
 
-    const orderData: Omit<Order, 'id' | 'createdDate' | 'deadline' | 'projectDetails'> & { createdDate: any } = {
+    const orderData: Omit<Order, 'id' | 'createdDate' | 'deadline' | 'projectDetails' | 'packageOrderDetails'> & { createdDate: any } = {
       formattedOrderId: formattedOrderId,
       clientName: user.displayName || user.email || 'N/A',
       projectName: selectedPackage.title,
@@ -128,7 +128,7 @@ export default function PackagesPage() {
       requestedFeatures: orderFeatures,
       contactEmail: user.email || 'N/A',
       budget: selectedPackage.priceLKR,
-      numberOfPages: selectedPackage.estimatedPages || 0, // Use estimatedPages or default
+      numberOfPages: selectedPackage.estimatedPages || 0, 
       selectedCurrency: 'lkr',
       currencySymbol: 'Rs.',
       userEmail: user.email || 'N/A',
@@ -136,10 +136,22 @@ export default function PackagesPage() {
     };
 
     try {
-      await addDoc(collection(db, "orders"), orderData);
+      const docRef = await addDoc(collection(db, "orders"), orderData) as DocumentReference;
+      const newOrderId = docRef.id;
       toast({
-        title: "Package Ordered!",
-        description: `Your order for the ${selectedPackage.title} (Order ID: ${formattedOrderId}) has been placed. We'll be in touch soon.`,
+        title: "Package Order Placed! Next Step: Fill Details",
+        description: (
+           <div>
+            <p>Your order for "{selectedPackage.title}" (ID: {formattedOrderId}) has been placed. Total: Rs.{selectedPackage.priceLKR.toLocaleString()}.</p>
+            <p className="mt-2">Please proceed to fill out the required details for your package.</p>
+            <Button asChild variant="link" className="p-0 h-auto mt-1 text-accent hover:underline">
+              <Link href={`/fill-package-details/${newOrderId}`}>
+                Go to Package Details Form <ExternalLink className="ml-1.5 h-3 w-3" />
+              </Link>
+            </Button>
+          </div>
+        ),
+        duration: 15000,
       });
     } catch (error) {
       console.error("Error ordering package:", error);
@@ -150,7 +162,7 @@ export default function PackagesPage() {
       });
     } finally {
       setIsOrdering(false);
-      setSelectedPackage(null); // Close dialog
+      setSelectedPackage(null); 
     }
   };
 

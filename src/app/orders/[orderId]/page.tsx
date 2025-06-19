@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { 
     ArrowLeft, Briefcase, CheckSquare, Clock, DollarSign, FileText, FileType, Globe, Info, ListChecks, 
-    Mail, PaletteIcon, Server, Settings2, ShieldQuestion, Star, User, Users, Building 
-} from "lucide-react";
+    Mail, PaletteIcon, Server, Settings2, ShieldQuestion, Star, User, Users, Building, Package, Edit3
+} from "lucide-react"; // Added Package, Edit3
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
-import type { SelectedFeatureInOrder, ProjectDetailsForm } from "@/types";
+import type { SelectedFeatureInOrder, ProjectDetailsForm, PackageOrderDetailsForm, Order } from "@/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
@@ -41,7 +41,7 @@ const DetailRow = ({ label, value, isLink, isPreformatted }: { label: string, va
           <a href={value} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline break-all">
             {displayValue}
           </a>
-        ) : isLink && typeof value === 'string' && !value.startsWith('http') && value.includes('@') ? ( // Basic email check
+        ) : isLink && typeof value === 'string' && !value.startsWith('http') && value.includes('@') ? ( 
            <a href={`mailto:${value}`} className="text-accent hover:underline break-all">
             {displayValue}
           </a>
@@ -64,8 +64,7 @@ const FunctionalityDisplay = ({ functionalities, paymentGateways }: { functional
   const selectedFunctionalities = Object.entries(functionalities)
     .filter(([, value]) => value)
     .map(([key]) => {
-      // Find the label from functionalityOptions or format the key
-      const option = functionalityOptions.find(opt => opt.id === key);
+      const option = projectFunctionalityOptions.find(opt => opt.id === key);
       let formattedKey = option ? option.label : key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
       
       if (key === 'paymentGateway' && paymentGateways && paymentGateways.length > 0) {
@@ -85,7 +84,43 @@ const FunctionalityDisplay = ({ functionalities, paymentGateways }: { functional
   );
 };
 
-const functionalityOptions = [ // Copied from fill-project-details for label mapping
+const PackageFeaturesDisplay = ({ details }: { details?: PackageOrderDetailsForm }) => {
+  if (!details) return <p className="text-sm text-muted-foreground">No features selected.</p>;
+  const selectedFeatures = [];
+  if (details.featureOnlineOrdering) selectedFeatures.push("Online Ordering");
+  if (details.featureOnlinePayments) selectedFeatures.push("Online Payments");
+  if (details.featureContactForm) selectedFeatures.push("Contact Form");
+  if (details.featureAdminPanel) selectedFeatures.push("Admin Panel");
+  if (details.featureCustomerDashboard) selectedFeatures.push("Customer Dashboard");
+  if (details.featureParcelTracking) selectedFeatures.push("Parcel Tracking");
+  if (details.featureBooking) selectedFeatures.push("Booking System");
+  if (details.featureBlog) selectedFeatures.push("Blog Section");
+  if (details.featureFileDownloads) selectedFeatures.push("File Downloads");
+  if (details.featureChatSupport) selectedFeatures.push("Chat Support");
+
+  if (selectedFeatures.length === 0 && !details.otherFeatures) {
+    return <p className="text-sm text-muted-foreground">No specific features selected.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {selectedFeatures.length > 0 && (
+        <ul className="list-disc list-inside space-y-1 pl-4">
+          {selectedFeatures.map((func, idx) => <li key={idx} className="text-sm text-foreground">{func}</li>)}
+        </ul>
+      )}
+      {details.otherFeatures && (
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mt-2">Other Requirements:</p>
+          <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{details.otherFeatures}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+const projectFunctionalityOptions = [ 
   { id: 'onlineOrdering', label: 'Online Ordering/E-commerce' },
   { id: 'paymentGateway', label: 'Payment Gateway Integration' },
   { id: 'contactForm', label: 'Contact Form' },
@@ -130,6 +165,21 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   }
 
   const pd = order.projectDetails;
+  const pkgDetails = order.packageOrderDetails;
+  const isBudgetPackage = order.projectType === 'Budget Package';
+
+  const getDefaultAccordionOpenValues = (order: Order) => {
+    const openValues = ['core-info'];
+    if (isBudgetPackage) {
+      if (!order.packageOrderDetails) openValues.push('fill-package-details-prompt');
+      else openValues.push('package-order-details');
+    } else {
+      if (!order.projectDetails) openValues.push('fill-project-details-prompt');
+      else openValues.push('project-details');
+    }
+    return openValues;
+  };
+
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8 font-body">
@@ -166,7 +216,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         <CardHeader className="border-b p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start gap-y-2">
             <div className="flex items-center gap-3">
-                <Briefcase className="h-6 w-6 text-accent" />
+                {isBudgetPackage ? <Package className="h-6 w-6 text-accent" /> : <Briefcase className="h-6 w-6 text-accent" /> }
                 <div>
                     <p className="text-sm text-muted-foreground">Project Type</p>
                     <p className="font-semibold text-lg">{order.projectType}</p>
@@ -177,7 +227,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </CardHeader>
 
         <CardContent className="p-0">
-          <Accordion type="multiple" defaultValue={['core-info', pd ? 'project-details' : 'fill-details-prompt'].filter(Boolean) as string[]} className="w-full">
+          <Accordion type="multiple" defaultValue={getDefaultAccordionOpenValues(order)} className="w-full">
             <AccordionItem value="core-info">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
                 <div className="flex items-center"> <Info className="mr-2 h-5 w-5 text-primary" /> Core Order Information</div>
@@ -193,17 +243,19 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   {order.hostingDetails && <DetailRow label="Initial Hosting Details" value={order.hostingDetails} />}
                    {order.requestedFeatures && order.requestedFeatures.length > 0 && (
                     <div className="py-3 border-b border-border last:border-b-0">
-                        <dt className="text-sm font-medium text-muted-foreground mb-2">Initially Requested Features ({order.requestedFeatures.length}):</dt>
+                        <dt className="text-sm font-medium text-muted-foreground mb-2">Initially Requested Features/Package Items ({order.requestedFeatures.length}):</dt>
                         <dd className="text-sm text-foreground col-span-2 space-y-2">
                         {order.requestedFeatures.map((feature: SelectedFeatureInOrder, index) => (
                           <Card key={index} className="p-3 bg-muted/30 text-sm rounded-lg shadow-sm">
                             <div className="flex justify-between items-center">
                                 <p className="font-medium text-foreground">{feature.name}</p>
-                                <p className="font-semibold text-primary">
-                                    {feature.currencySymbol}{feature.price.toLocaleString()}
-                                </p>
+                                {!isBudgetPackage && (
+                                  <p className="font-semibold text-primary">
+                                      {feature.currencySymbol}{feature.price.toLocaleString()}
+                                  </p>
+                                )}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">ID: {feature.id} ({feature.currency.toUpperCase()})</p>
+                            {!isBudgetPackage && <p className="text-xs text-muted-foreground mt-1">ID: {feature.id} ({feature.currency.toUpperCase()})</p>}
                           </Card>
                         ))}
                         </dd>
@@ -213,7 +265,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               </AccordionContent>
             </AccordionItem>
             
-            {pd && (
+            {/* Conditional rendering for Project Details (Custom Build) */}
+            {!isBudgetPackage && pd && (
             <AccordionItem value="project-details">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
                 <div className="flex items-center"> <FileText className="mr-2 h-5 w-5 text-primary" /> Detailed Project Specifications</div>
@@ -322,24 +375,114 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         <DetailRow label="Agreed to Share Content/Feedback" value={pd.agreeToShareContent} />
                    </dl></CardContent>
                 </Card>
-
               </AccordionContent>
             </AccordionItem>
             )}
-            {!pd && (
-              <AccordionItem value="fill-details-prompt" className="border-t">
+            {!isBudgetPackage && !pd && (
+              <AccordionItem value="fill-project-details-prompt" className="border-t">
                 <AccordionContent className="px-6 py-4 bg-muted/20">
                     <div className="text-center text-muted-foreground">
                         <p className="mb-3 text-base">No detailed project specifications have been submitted for this order yet.</p>
                         <Button asChild variant="default" className="bg-accent hover:bg-accent/90 text-accent-foreground">
                             <Link href={`/fill-project-details/${order.id}`}>
-                                Click here to fill out the Project Details Form
+                                <Edit3 className="mr-2 h-4 w-4" /> Click here to fill out the Project Details Form
                             </Link>
                         </Button>
                     </div>
                 </AccordionContent>
               </AccordionItem>
             )}
+
+            {/* Conditional rendering for Package Order Details */}
+            {isBudgetPackage && pkgDetails && (
+              <AccordionItem value="package-order-details">
+                <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
+                  <div className="flex items-center"> <Package className="mr-2 h-5 w-5 text-primary" /> Package Order Specifications</div>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-4 pt-2 space-y-6">
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardHeader className="px-0 pt-0"><SectionTitle icon={User} title="Basic Info" /></CardHeader>
+                    <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                      <DetailRow label="Full Name" value={pkgDetails.fullName} />
+                      <DetailRow label="NIC Number" value={pkgDetails.nicNumber} />
+                      <DetailRow label="Email" value={pkgDetails.email} isLink={pkgDetails.email}/>
+                      <DetailRow label="Phone" value={pkgDetails.phone} />
+                      <DetailRow label="Address" value={pkgDetails.address} isPreformatted />
+                    </dl></CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardHeader className="px-0"><SectionTitle icon={Globe} title="Website Setup" /></CardHeader>
+                    <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                      <DetailRow label="Desired Website Name" value={pkgDetails.websiteName} />
+                      <DetailRow label="Has Domain?" value={pkgDetails.hasDomain} />
+                      {pkgDetails.hasDomain === 'Yes' && <DetailRow label="Domain Name" value={pkgDetails.domainName} isLink={pkgDetails.domainName && !pkgDetails.domainName.startsWith('http') ? `http://${pkgDetails.domainName}`: pkgDetails.domainName} />}
+                      <DetailRow label="Has Hosting?" value={pkgDetails.hasHosting} />
+                      {pkgDetails.hasHosting === 'Yes' && <DetailRow label="Hosting Provider" value={pkgDetails.hostingProvider} />}
+                      <DetailRow label="Needs Business Emails?" value={pkgDetails.needsBusinessEmail} />
+                      {pkgDetails.needsBusinessEmail === 'Yes' && <DetailRow label="No. of Business Emails" value={pkgDetails.businessEmailCount?.toString()} />}
+                    </dl></CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardHeader className="px-0"><SectionTitle icon={PaletteIcon} title="Design Preferences" /></CardHeader>
+                    <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                      <DetailRow label="Base Colors" value={pkgDetails.baseColors} />
+                      <DetailRow label="Style" value={pkgDetails.style === 'Other' && pkgDetails.styleOther ? `Other: ${pkgDetails.styleOther}`: pkgDetails.style} />
+                      <DetailRow label="Inspiration Sites" value={pkgDetails.inspirationSites} isPreformatted />
+                      <DetailRow label="Font & Logo Ideas" value={pkgDetails.fontAndLogoIdeas} isPreformatted />
+                    </dl></CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardHeader className="px-0"><SectionTitle icon={Settings2} title="Features Needed" /></CardHeader>
+                    <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                       <div className="py-3 border-b border-border last:border-b-0">
+                         <dt className="text-sm font-medium text-muted-foreground mb-2">Selected Features:</dt>
+                         <dd><PackageFeaturesDisplay details={pkgDetails} /></dd>
+                       </div>
+                    </dl></CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardHeader className="px-0"><SectionTitle icon={DollarSign} title="Budget" /></CardHeader>
+                    <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                      <DetailRow label="Budget Range" value={pkgDetails.budgetRange} />
+                    </dl></CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardHeader className="px-0"><SectionTitle icon={Star} title="Notes" /></CardHeader>
+                    <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                      <DetailRow label="Business Goals / Special Needs" value={pkgDetails.businessGoalsSpecialNeeds} isPreformatted />
+                    </dl></CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardHeader className="px-0"><SectionTitle icon={CheckSquare} title="Consent" /></CardHeader>
+                    <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                      <DetailRow label="Confirmed Details Correct" value={pkgDetails.confirmDetailsCorrect} />
+                      <DetailRow label="Agreed to Share Materials" value={pkgDetails.agreeToShareMaterials} />
+                    </dl></CardContent>
+                  </Card>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+            {isBudgetPackage && !pkgDetails && (
+              <AccordionItem value="fill-package-details-prompt" className="border-t">
+                <AccordionContent className="px-6 py-4 bg-muted/20">
+                    <div className="text-center text-muted-foreground">
+                        <p className="mb-3 text-base">No specific details have been submitted for this package order yet.</p>
+                        <Button asChild variant="default" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                            <Link href={`/fill-package-details/${order.id}`}>
+                                <Edit3 className="mr-2 h-4 w-4" /> Click here to fill out the Package Details Form
+                            </Link>
+                        </Button>
+                    </div>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+
           </Accordion>
         </CardContent>
 
@@ -355,4 +498,3 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     </div>
   );
 }
-

@@ -1,5 +1,5 @@
 
-import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SelectedFeatureInOrder, ProjectDetailsForm, SortableOrderKey } from '@/types';
+import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SelectedFeatureInOrder, ProjectDetailsForm, SortableOrderKey, PackageOrderDetailsForm } from '@/types';
 import { format } from 'date-fns';
 import { collection, getDocs, doc, getDoc, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
@@ -27,13 +27,16 @@ export async function fetchOrders(
     const ordersCollectionRef = collection(db, 'orders');
     const firestoreSortKey: string = sortConfig.key || 'createdDate';
     let queryDirectionToSort: 'asc' | 'desc' = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
-    let requiresClientSideReverse = false;
+    
 
-    // Workaround for potential Firestore issues with descending sorts:
-    // Query in ascending order and reverse on client if descending is requested.
-    if (sortConfig.direction === 'descending') {
-      queryDirectionToSort = 'asc';
-      requiresClientSideReverse = true;
+    // Firestore requires the first orderBy field to be the same as the field used in inequality filters (if any).
+    // Since we don't have inequality filters here currently, simple orderBy is fine.
+    // For descending sorts on potentially problematic fields (like Timestamps or mixed types), 
+    // querying ascending and reversing client-side is safer.
+    let requiresClientSideReverse = false;
+    if (firestoreSortKey === 'createdDate' && sortConfig.direction === 'descending') {
+      queryDirectionToSort = 'asc'; // Query ascending for dates
+      requiresClientSideReverse = true; // Then reverse on client
     }
     
     const q = query(ordersCollectionRef, orderBy(firestoreSortKey, queryDirectionToSort));
@@ -52,7 +55,7 @@ export async function fetchOrders(
         status: data.status || 'Pending',
         description: data.description || '',
         requestedFeatures: (Array.isArray(data.requestedFeatures) ? data.requestedFeatures : []) as SelectedFeatureInOrder[],
-        createdDate: safeToISOString(data.createdDate, true)!, // Default to now if invalid/missing
+        createdDate: safeToISOString(data.createdDate, true)!, 
         deadline: safeToISOString(data.deadline),
         contactEmail: data.contactEmail || 'N/A',
         budget: typeof data.budget === 'number' ? data.budget : 0,
@@ -63,6 +66,7 @@ export async function fetchOrders(
         domain: data.domain || undefined,
         hostingDetails: data.hostingDetails || undefined,
         projectDetails: data.projectDetails as ProjectDetailsForm | undefined, 
+        packageOrderDetails: data.packageOrderDetails as PackageOrderDetailsForm | undefined, // Fetch package details
       } as Order;
     });
 
@@ -89,8 +93,6 @@ export async function fetchOrders(
 
   } catch (error) {
     console.error("Error fetching orders from Firestore:", error);
-    // Advise checking Firestore console for index creation links.
-    // The error message often includes a link to create missing indexes.
     return [];
   }
 }
@@ -112,7 +114,7 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
         status: data.status || 'Pending',
         description: data.description || '',
         requestedFeatures: (Array.isArray(data.requestedFeatures) ? data.requestedFeatures : []) as SelectedFeatureInOrder[],
-        createdDate: safeToISOString(data.createdDate, true)!, // Default to now if invalid/missing
+        createdDate: safeToISOString(data.createdDate, true)!, 
         deadline: safeToISOString(data.deadline),
         contactEmail: data.contactEmail || 'N/A',
         budget: typeof data.budget === 'number' ? data.budget : 0,
@@ -123,6 +125,7 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
         domain: data.domain || undefined,
         hostingDetails: data.hostingDetails || undefined,
         projectDetails: data.projectDetails as ProjectDetailsForm | undefined,
+        packageOrderDetails: data.packageOrderDetails as PackageOrderDetailsForm | undefined, // Fetch package details
       } as Order;
     } else {
       console.log("No such order document!");
@@ -134,7 +137,7 @@ export async function fetchOrderById(id: string): Promise<Order | undefined> {
   }
 }
 
-export const PROJECT_TYPES: ProjectType[] = ['New Website', 'Redesign', 'Feature Enhancement', 'Maintenance', 'Custom Build'];
+export const PROJECT_TYPES: ProjectType[] = ['New Website', 'Redesign', 'Feature Enhancement', 'Maintenance', 'Custom Build', 'Budget Package'];
 export const ORDER_STATUSES: OrderStatus[] = [
   'Pending', 
   'In Progress', 
@@ -150,7 +153,7 @@ export const ORDER_STATUSES: OrderStatus[] = [
 export function formatDate(dateInput: string | number | Date | undefined | null, dateFormat: string = 'PPP'): string {
   if (!dateInput) return 'N/A';
   try {
-    const date = new Date(dateInput); // Works for ISO strings, epoch numbers, and Date objects
+    const date = new Date(dateInput); 
     if (isNaN(date.getTime())) { 
       return 'Invalid Date';
     }

@@ -1,6 +1,4 @@
 
-
-
 export type OrderStatus =
   | 'Pending'
   | 'In Progress'
@@ -12,7 +10,7 @@ export type OrderStatus =
   | 'Waiting for Payment'
   | 'Suspended';
 
-export type ProjectType = 'New Website' | 'Redesign' | 'Feature Enhancement' | 'Maintenance' | 'Custom Build';
+export type ProjectType = 'New Website' | 'Redesign' | 'Feature Enhancement' | 'Maintenance' | 'Custom Build' | 'Budget Package';
 
 export interface CustomerDetailsForm {
   name: string;
@@ -44,7 +42,7 @@ export interface ProjectDetailsForm {
   companyAddress?: string;
   companyContactNumber?: string;
   companyEmail?: string;
-  companyLogoUrl?: string; // URL for logo
+  companyLogoUrl?: string; 
 
   // Website Details
   desiredWebsiteName: string;
@@ -88,14 +86,14 @@ export interface ProjectDetailsForm {
   hasPageContent: 'Yes' | 'No';
   wantsContentWriting: 'Yes' | 'No';
   hasImagesReady: 'Yes' | 'No';
-  imageSourceUrl?: string; // URL for images
+  imageSourceUrl?: string; 
 
   // Legal & Docs
   hasLegalDocs: 'Yes' | 'No';
-  legalDocsSourceUrl?: string; // URL for legal documents
+  legalDocsSourceUrl?: string; 
 
   // Timeline & Budget
-  preferredLaunchDate?: string; // ISO string representation of date
+  preferredLaunchDate?: string; 
   projectBudget: string;
 
   // Extra Notes
@@ -105,6 +103,54 @@ export interface ProjectDetailsForm {
   // Final Consent
   confirmDetailsAccurate: boolean;
   agreeToShareContent: boolean;
+}
+
+export interface PackageOrderDetailsForm {
+  // Basic Info
+  fullName: string;
+  nicNumber: string;
+  email: string;
+  phone: string;
+  address: string;
+
+  // Website Setup
+  websiteName: string;
+  hasDomain: 'Yes' | 'No';
+  domainName?: string;
+  hasHosting: 'Yes' | 'No';
+  hostingProvider?: string;
+  needsBusinessEmail: 'Yes' | 'No';
+  businessEmailCount?: number;
+
+  // Design Preferences
+  baseColors: string;
+  style: 'Modern' | 'Minimal' | 'Classic' | 'Playful' | 'Elegant' | 'Techy' | 'Bohemian' | 'Artistic' | 'Other';
+  styleOther?: string;
+  inspirationSites?: string;
+  fontAndLogoIdeas?: string;
+
+  // Features Needed
+  featureOnlineOrdering?: boolean;
+  featureOnlinePayments?: boolean;
+  featureContactForm?: boolean;
+  featureAdminPanel?: boolean;
+  featureCustomerDashboard?: boolean;
+  featureParcelTracking?: boolean;
+  featureBooking?: boolean;
+  featureBlog?: boolean;
+  featureFileDownloads?: boolean;
+  featureChatSupport?: boolean;
+  otherFeatures?: string;
+
+  // Budget
+  budgetRange: string;
+
+  // Notes
+  businessGoalsSpecialNeeds?: string;
+
+  // Consent
+  confirmDetailsCorrect: boolean;
+  agreeToShareMaterials: boolean;
 }
 
 
@@ -117,8 +163,8 @@ export interface Order {
   status: OrderStatus;
   description: string;
   requestedFeatures: SelectedFeatureInOrder[];
-  deadline?: string; // ISO string representation of date
-  createdDate: string; // ISO string representation of date
+  deadline?: string; 
+  createdDate: string; 
   contactEmail: string;
   budget: number;
   numberOfPages: number;
@@ -127,7 +173,8 @@ export interface Order {
   userEmail: string;
   domain?: string;
   hostingDetails?: string;
-  projectDetails?: ProjectDetailsForm; // Added field
+  projectDetails?: ProjectDetailsForm; 
+  packageOrderDetails?: PackageOrderDetailsForm; // New field for package order details
 }
 
 export interface OrderFilters {
@@ -136,22 +183,21 @@ export interface OrderFilters {
   searchTerm?: string;
 }
 
-// Define which keys of Order are considered sortable (primitive types suitable for Firestore orderBy)
 export type SortableOrderKey =
   | 'formattedOrderId'
   | 'clientName'
   | 'projectName'
   | 'projectType'
   | 'status'
-  | 'deadline' // Firestore sorts ISO strings lexicographically
-  | 'createdDate' // Firestore sorts ISO strings lexicographically (or Timestamps if stored as such)
+  | 'deadline' 
+  | 'createdDate' 
   | 'contactEmail'
   | 'budget'
   | 'numberOfPages'
   | 'userEmail';
 
 export interface SortConfig {
-  key: SortableOrderKey | null; // Use the more restrictive SortableOrderKey
+  key: SortableOrderKey | null; 
   direction: 'ascending' | 'descending';
 }
 
