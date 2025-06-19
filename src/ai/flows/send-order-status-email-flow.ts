@@ -10,11 +10,11 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit'; // Changed from 'genkit/zod'
+import { z } from 'genkit';
 import type { OrderStatus } from '@/types';
 // import sgMail from '@sendgrid/mail'; // Removed SendGrid
 
-export const SendOrderStatusEmailInputSchema = z.object({
+const SendOrderStatusEmailInputSchema = z.object({
   customerEmail: z.string().email().describe('The email address of the customer.'),
   customerName: z.string().describe('The name of the customer.'),
   projectName: z.string().describe('The name of the project.'),
@@ -26,7 +26,7 @@ export const SendOrderStatusEmailInputSchema = z.object({
 });
 export type SendOrderStatusEmailInput = z.infer<typeof SendOrderStatusEmailInputSchema>;
 
-export const SendOrderStatusEmailOutputSchema = z.object({
+const SendOrderStatusEmailOutputSchema = z.object({
   success: z.boolean().describe('Whether the notification process was successful.'),
   message: z.string().describe('A message indicating the result of the notification process.'),
 });
