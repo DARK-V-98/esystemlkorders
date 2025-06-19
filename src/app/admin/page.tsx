@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   ShieldCheck, UploadCloud, AlertTriangle, CheckCircle2, Edit, Save, Loader2, DollarSign, 
   ListChecks, ListOrdered, CheckSquare, Search, ExternalLink, XCircle, Settings, Clock, 
-  MoreVertical, PauseCircle, PlayCircle, Trash2 
+  MoreVertical, PauseCircle, PlayCircle, Trash2, Mail 
 } from "lucide-react";
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, getDoc, writeBatch, updateDoc, setDoc, Timestamp, query, orderBy as firestoreOrderBy } from 'firebase/firestore';
@@ -31,6 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { sendOrderStatusUpdateEmail } from '@/ai/flows/send-order-status-email-flow';
 
 
 const FEATURES_COLLECTION = 'siteFeaturesConfig';
@@ -304,6 +305,16 @@ function AdminOrdersManagement() {
     setUpdatingOrderId(orderId); 
     try {
       const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
+      const orderToUpdate = allOrders.find(o => o.id === orderId);
+
+      if (!orderToUpdate) {
+        toast({ variant: "destructive", title: "Update Error", description: `Order ${formattedOrderId} not found.` });
+        setUpdatingOrderId(null);
+        return;
+      }
+      
+      const oldStatus = orderToUpdate.status; // Capture old status
+
       await updateDoc(orderDocRef, { status: newStatus });
       toast({ title: "Order Status Updated", description: `Order ${formattedOrderId} status changed to ${newStatus}.` });
       
@@ -314,6 +325,52 @@ function AdminOrdersManagement() {
           order.formattedOrderId.toLowerCase().includes(adminSearchTerm.toLowerCase()) || adminSearchTerm === ''
         )
       );
+
+      // Call Genkit flow to send email
+      if (orderToUpdate.contactEmail) {
+        const emailInput = {
+          customerEmail: orderToUpdate.contactEmail,
+          customerName: orderToUpdate.clientName,
+          projectName: orderToUpdate.projectName,
+          formattedOrderId: orderToUpdate.formattedOrderId,
+          newStatus: newStatus,
+          oldStatus: oldStatus,
+        };
+        
+        try {
+          const emailResult = await sendOrderStatusUpdateEmail(emailInput);
+          if (emailResult.success) {
+            toast({ 
+              title: "Email Notification", 
+              description: (
+                <div className="flex items-start gap-2">
+                  <Mail className="h-4 w-4 mt-0.5 text-green-500" />
+                  <span>{emailResult.message}</span>
+                </div>
+              )
+            });
+          } else {
+            toast({ 
+              variant: "destructive", 
+              title: "Email Notification Failed", 
+              description: emailResult.message 
+            });
+          }
+        } catch (emailError) {
+          console.error("Error calling sendOrderStatusUpdateEmail flow:", emailError);
+          toast({ 
+            variant: "destructive", 
+            title: "Email Flow Error", 
+            description: "Could not initiate the email sending process." 
+          });
+        }
+      } else {
+        toast({
+          variant: "default",
+          title: "Email Notification Skipped",
+          description: `No contact email found for order ${formattedOrderId}.`
+        });
+      }
 
     } catch (error) {
       console.error(`Error updating order ${formattedOrderId} to ${newStatus}:`, error);
