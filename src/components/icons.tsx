@@ -5,7 +5,7 @@ import type { LucideIcon, LucideProps } from 'lucide-react';
 import { 
   Palette, Server, Settings, Smartphone, DollarSign, Briefcase, User, Mail, 
   FileText, BarChart3, CreditCard, Users, ShieldCheck, MapPin, DatabaseZap, FileStack,
-  Tag // Added Tag
+  Tag, Gem // Added Gem
 } from 'lucide-react';
 
 // Add any other icons you use here
@@ -26,7 +26,8 @@ export const iconMap: { [key: string]: LucideIcon } = {
   MapPin,
   DatabaseZap,
   FileStack,
-  Tag, // Mapped Tag
+  Tag,
+  Gem, // Mapped Gem
   // Default/fallback icon if needed
   // DefaultIcon: Settings, 
 };
@@ -46,4 +47,3 @@ export const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
   const IconComponent = iconMap[name];
   return <IconComponent {...props} />;
 };
-

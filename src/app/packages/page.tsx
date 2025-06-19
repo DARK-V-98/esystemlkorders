@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2, ExternalLink, ShieldCheck, Settings as SettingsIcon } from "lucide-react";
+import { ArrowRight, Layers, Palette, Tag, ShoppingCart, Loader2, ExternalLink, ShieldCheck, Settings as SettingsIcon, Gem } from "lucide-react";
 import { useCurrency } from '@/contexts/currency-context';
 import { DynamicIcon } from '@/components/icons';
 import {
@@ -40,7 +40,7 @@ interface PackageInfo {
   estimatedPages?: number;
 }
 
-const commonFeature = "Basic Technical Support";
+const commonFeature = "Basic Technical Support"; // This will be overridden by lifetime support in Premium+
 
 const packagesData: PackageInfo[] = [
   // Budget Packs
@@ -146,6 +146,41 @@ const packagesData: PackageInfo[] = [
     actionText: 'Order Gold Ultimate',
     highlight: true,
     estimatedPages: 35,
+  },
+  // Premium+ Packs
+  {
+    id: 'premium-plus-core',
+    title: 'Premium+ Core',
+    description: 'The ultimate solution with dedicated support, free hosting, and top-tier premium features for unparalleled online presence.',
+    priceLKR: 500000,
+    priceDisplay: `Rs. 500,000`,
+    features: ['Up to 40 Pages', 'Elite Custom Design & Branding', 'Advanced E-commerce & Marketplace Features', 'Dedicated Account Manager', '1 Year Free Hosting', 'Lifetime Technical Support', 'Priority Feature Updates', 'Advanced Security Suite'],
+    iconName: 'Gem',
+    actionText: 'Order Premium+ Core',
+    estimatedPages: 40,
+  },
+  {
+    id: 'premium-plus-elite',
+    title: 'Premium+ Elite',
+    description: 'Our flagship offering with bespoke development, strategic consultancy, and every premium feature for market domination.',
+    priceLKR: 750000,
+    priceDisplay: `Rs. 750,000`,
+    features: ['Unlimited Pages (Scalable)', 'Fully Bespoke Development & Integrations', 'AI-Powered Features & Personalization', 'Strategic Growth Consultancy', '1 Year Free Hosting', 'Lifetime Technical Support', 'Dedicated Support Team Access', 'Quarterly Performance Audits & Optimization'],
+    iconName: 'Gem',
+    actionText: 'Order Premium+ Elite',
+    highlight: true,
+    estimatedPages: 50,
+  },
+  {
+    id: 'premium-plus-ultra',
+    title: 'Premium+ Ultra',
+    description: 'The pinnacle of web solutions, offering comprehensive, custom-built platforms with continuous innovation and support.',
+    priceLKR: 1000000,
+    priceDisplay: `Rs. 1,000,000`,
+    features: ['Custom Platform Development', 'Enterprise-Grade Infrastructure & Scalability', 'Full Suite of AI & Automation Tools', 'Ongoing Strategic Partnership & Innovation Roadmap', '1 Year Free Hosting', 'Lifetime Technical Support', '24/7 Priority Support Line', 'Complete Digital Ecosystem Integration'],
+    iconName: 'Gem',
+    actionText: 'Order Premium+ Ultra',
+    estimatedPages: 60,
   },
   // Custom Package
   {
@@ -331,4 +366,3 @@ export default function PackagesPage() {
     </AlertDialog>
   );
 }
-
