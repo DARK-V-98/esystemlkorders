@@ -18,12 +18,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { Order, PackageOrderDetailsForm, Price, Currency, SelectedPackageAddon } from '@/types';
+import type { Order, PackageOrderDetailsForm } from '@/types';
 import { Loader2, AlertTriangle, DollarSign } from 'lucide-react';
-import { useCurrency } from '@/contexts/currency-context';
+// Removed useCurrency as dynamic pricing is removed
 
 const designStyleOptions = ['Modern', 'Minimal', 'Classic', 'Playful', 'Elegant', 'Techy', 'Bohemian', 'Artistic', 'Other'] as const;
 
+// This remains for the informational alert
 const informationalAddonPriceRanges = [
   { name: 'Online Ordering', range: 'LKR 20,000 – 40,000' },
   { name: 'Online Payments', range: 'LKR 15,000 – 30,000' },
@@ -37,28 +38,29 @@ const informationalAddonPriceRanges = [
   { name: 'Chat Support', range: 'LKR 5,000 – 15,000' },
 ];
 
-interface AddonConfig {
-  id: keyof Pick<PackageOrderDetailsForm, 
-    'featureOnlineOrdering' | 'featureOnlinePayments' | 'featureContactForm' | 
-    'featureAdminPanel' | 'featureCustomerDashboard' | 'featureParcelTracking' | 
+// Simplified feature list for checkboxes
+const addonFeatureFields: Array<keyof Pick<PackageOrderDetailsForm,
+    'featureOnlineOrdering' | 'featureOnlinePayments' | 'featureContactForm' |
+    'featureAdminPanel' | 'featureCustomerDashboard' | 'featureParcelTracking' |
     'featureBooking' | 'featureBlog' | 'featureFileDownloads' | 'featureChatSupport'
-  >;
-  name: string;
-  price: Price; 
-}
-
-export const ADDON_FEATURES_CONFIG: AddonConfig[] = [
-  { id: 'featureOnlineOrdering', name: 'Online Ordering', price: { lkr: 20000, usd: 67 } },
-  { id: 'featureOnlinePayments', name: 'Online Payments', price: { lkr: 15000, usd: 50 } },
-  { id: 'featureContactForm', name: 'Contact Form', price: { lkr: 5000, usd: 17 } },
-  { id: 'featureAdminPanel', name: 'Admin Panel', price: { lkr: 25000, usd: 83 } },
-  { id: 'featureCustomerDashboard', name: 'Customer Dashboard', price: { lkr: 20000, usd: 67 } },
-  { id: 'featureParcelTracking', name: 'Parcel Tracking', price: { lkr: 25000, usd: 83 } },
-  { id: 'featureBooking', name: 'Booking System', price: { lkr: 30000, usd: 100 } },
-  { id: 'featureBlog', name: 'Blog Section', price: { lkr: 10000, usd: 33 } },
-  { id: 'featureFileDownloads', name: 'File Downloads', price: { lkr: 5000, usd: 17 } },
-  { id: 'featureChatSupport', name: 'Chat Support', price: { lkr: 5000, usd: 17 } },
+>> = [
+  'featureOnlineOrdering', 'featureOnlinePayments', 'featureContactForm',
+  'featureAdminPanel', 'featureCustomerDashboard', 'featureParcelTracking',
+  'featureBooking', 'featureBlog', 'featureFileDownloads', 'featureChatSupport'
 ];
+
+const addonFeatureLabels: Record<typeof addonFeatureFields[number], string> = {
+  featureOnlineOrdering: 'Online Ordering',
+  featureOnlinePayments: 'Online Payments',
+  featureContactForm: 'Contact Form',
+  featureAdminPanel: 'Admin Panel',
+  featureCustomerDashboard: 'Customer Dashboard',
+  featureParcelTracking: 'Parcel Tracking',
+  featureBooking: 'Booking System',
+  featureBlog: 'Blog Section',
+  featureFileDownloads: 'File Downloads',
+  featureChatSupport: 'Chat Support',
+};
 
 
 const packageDetailsSchema = z.object({
@@ -99,7 +101,7 @@ const packageDetailsSchema = z.object({
   featureChatSupport: z.boolean().optional().default(false),
   otherFeatures: z.string().optional(),
   
-  budgetRange: z.string().optional(), 
+  budgetRange: z.string().min(1, 'Budget range is required.'),
 
   // Notes
   businessGoalsSpecialNeeds: z.string().optional(),
@@ -126,17 +128,11 @@ export default function FillPackageDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const { selectedCurrency, currencySymbol } = useCurrency();
   const orderId = params.orderId as string;
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderData, setOrderData] = useState<Order | null>(null);
-
-  const [basePackagePrice, setBasePackagePrice] = useState<Price>({ lkr: 0, usd: 0 });
-  const [addonsTotalPrice, setAddonsTotalPrice] = useState<Price>({ lkr: 0, usd: 0 });
-  const [finalCalculatedPrice, setFinalCalculatedPrice] = useState<Price>({ lkr: 0, usd: 0 });
-
 
   const { control, handleSubmit, register, watch, setValue, formState: { errors } } = useForm<PackageOrderDetailsForm>({
     resolver: zodResolver(packageDetailsSchema),
@@ -147,15 +143,15 @@ export default function FillPackageDetailsPage() {
       phone: '',
       address: '',
       websiteName: '',
-      needsWebsiteSetupAssistance: "", 
-      hasDomain: "", 
+      needsWebsiteSetupAssistance: "",
+      hasDomain: "",
       domainName: '',
-      hasHosting: "", 
+      hasHosting: "",
       hostingProvider: '',
-      needsBusinessEmail: "", 
+      needsBusinessEmail: "",
       businessEmailCount: 0,
       baseColors: '',
-      style: undefined, 
+      style: undefined,
       styleOther: '',
       inspirationSites: '',
       fontAndLogoIdeas: '',
@@ -170,42 +166,12 @@ export default function FillPackageDetailsPage() {
       featureFileDownloads: false,
       featureChatSupport: false,
       otherFeatures: '',
-      budgetRange: "", 
+      budgetRange: "",
       businessGoalsSpecialNeeds: '',
       confirmDetailsCorrect: false,
       agreeToShareMaterials: false,
     },
   });
-
-  const watchedFeatures = watch(ADDON_FEATURES_CONFIG.map(f => f.id)); 
-
-  useEffect(() => {
-    if (isLoading || !orderData) return; 
-
-    const baseLKR = orderData.budget; 
-    const baseUSD = Math.round(baseLKR / 300); 
-    setBasePackagePrice({ lkr: baseLKR, usd: baseUSD });
-
-    let currentAddonsTotalLKR = 0;
-    let currentAddonsTotalUSD = 0;
-
-    ADDON_FEATURES_CONFIG.forEach(featureConfig => {
-      const featureKey = featureConfig.id;
-      if (watch(featureKey)) { 
-        currentAddonsTotalLKR += featureConfig.price.lkr;
-        currentAddonsTotalUSD += featureConfig.price.usd;
-      }
-    });
-    setAddonsTotalPrice({ lkr: currentAddonsTotalLKR, usd: currentAddonsTotalUSD });
-
-    const finalLKR = baseLKR + currentAddonsTotalLKR;
-    const finalUSD = baseUSD + currentAddonsTotalUSD;
-    setFinalCalculatedPrice({ lkr: finalLKR, usd: finalUSD });
-    
-    setValue('budgetRange', `${currencySymbol}${ (selectedCurrency === 'lkr' ? finalLKR : finalUSD).toLocaleString() } ${selectedCurrency.toUpperCase()}`);
-
-  }, [watchedFeatures, orderData, selectedCurrency, currencySymbol, watch, setValue, isLoading]);
-
 
   const watchHasDomain = watch("hasDomain");
   const watchHasHosting = watch("hasHosting");
@@ -227,14 +193,11 @@ export default function FillPackageDetailsPage() {
              router.push(`/orders/${orderId}`);
              return;
           }
-          setOrderData(fetchedOrder); 
-          
-          const baseLKR = fetchedOrder.budget;
-          const baseUSD = Math.round(baseLKR / 300); 
-          setBasePackagePrice({ lkr: baseLKR, usd: baseUSD });
+          setOrderData(fetchedOrder);
           
           const details = fetchedOrder.packageOrderDetails;
           if (details) {
+            // Explicitly set values, ensuring radio groups get "" if not 'Yes'/'No'
             setValue('fullName', details.fullName || fetchedOrder.clientName || '');
             setValue('nicNumber', details.nicNumber || '');
             setValue('email', details.email || fetchedOrder.contactEmail || '');
@@ -258,36 +221,32 @@ export default function FillPackageDetailsPage() {
             setValue('businessEmailCount', Number(details.businessEmailCount) || 0);
             
             setValue('baseColors', details.baseColors || '');
-            setValue('style', details.style || undefined);
+            setValue('style', details.style || undefined); // Dropdown can handle undefined for placeholder
             setValue('styleOther', details.styleOther || '');
             setValue('inspirationSites', details.inspirationSites || '');
             setValue('fontAndLogoIdeas', details.fontAndLogoIdeas || '');
 
-            ADDON_FEATURES_CONFIG.forEach(addon => {
-              setValue(addon.id, Boolean(details[addon.id]));
+            // Set boolean features
+            addonFeatureFields.forEach(field => {
+              setValue(field, Boolean(details[field]));
             });
             setValue('otherFeatures', details.otherFeatures || '');
             
+            setValue('budgetRange', details.budgetRange || `${fetchedOrder.currencySymbol}${fetchedOrder.budget} ${fetchedOrder.selectedCurrency.toUpperCase()}`);
             setValue('businessGoalsSpecialNeeds', details.businessGoalsSpecialNeeds || '');
             setValue('confirmDetailsCorrect', Boolean(details.confirmDetailsCorrect));
             setValue('agreeToShareMaterials', Boolean(details.agreeToShareMaterials));
-
-            if(details.finalCalculatedPrice) setFinalCalculatedPrice(details.finalCalculatedPrice);
-            else setFinalCalculatedPrice({lkr: baseLKR, usd: baseUSD});
-
-            if(details.addonsTotalPrice) setAddonsTotalPrice(details.addonsTotalPrice);
-            else setAddonsTotalPrice({lkr:0, usd:0});
           } else {
+             // Pre-fill from order if no details yet
              setValue('fullName', fetchedOrder.clientName || '');
              setValue('email', fetchedOrder.contactEmail || '');
              setValue('needsWebsiteSetupAssistance', "");
              setValue('hasDomain', "");
              setValue('hasHosting', "");
              setValue('needsBusinessEmail', "");
-             setValue('businessEmailCount', 0);
              setValue('style', undefined);
-             setFinalCalculatedPrice({ lkr: baseLKR, usd: baseUSD }); 
-             setAddonsTotalPrice({lkr:0, usd:0});
+             setValue('businessEmailCount', 0);
+             setValue('budgetRange', `${fetchedOrder.currencySymbol}${fetchedOrder.budget} ${fetchedOrder.selectedCurrency.toUpperCase()}`);
           }
         } else {
           toast({ variant: 'destructive', title: 'Error', description: 'Order not found.' });
@@ -297,7 +256,7 @@ export default function FillPackageDetailsPage() {
         console.error("Error fetching order:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to load order details.' });
       } finally {
-        setIsLoading(false); 
+        setIsLoading(false);
       }
     };
     fetchOrder();
@@ -306,24 +265,11 @@ export default function FillPackageDetailsPage() {
 
   const onSubmit: SubmitHandler<PackageOrderDetailsForm> = async (data) => {
     setIsSubmitting(true);
-
-    const selectedAddonsData: SelectedPackageAddon[] = ADDON_FEATURES_CONFIG
-      .filter(addon => data[addon.id])
-      .map(addon => ({
-        id: addon.id,
-        name: addon.name,
-        priceAtSubmission: addon.price, 
-        selectedCurrency: selectedCurrency, 
-      }));
-
     try {
       const orderDocRef = doc(db, 'orders', orderId);
-      const dataToSave: Partial<PackageOrderDetailsForm> & { lastUpdated?: any, selectedAddons?: SelectedPackageAddon[], addonsTotalPrice?: Price, finalCalculatedPrice?: Price } = {
+      // Data to save no longer includes dynamic price calculations
+      const dataToSave: Partial<PackageOrderDetailsForm> & { lastUpdated?: any } = {
         ...data,
-        selectedAddons: selectedAddonsData,
-        addonsTotalPrice: addonsTotalPrice, 
-        finalCalculatedPrice: finalCalculatedPrice, 
-        budgetRange: `${currencySymbol}${finalCalculatedPrice[selectedCurrency].toLocaleString()} ${selectedCurrency.toUpperCase()}`, 
         lastUpdated: serverTimestamp(),
       };
 
@@ -332,7 +278,7 @@ export default function FillPackageDetailsPage() {
         title: 'Package Order Details Saved!', 
         description: 'Your package specifications have been successfully saved.' 
       });
-      router.push(`/orders/${orderId}`); 
+      router.push(`/orders/${orderId}`);
     } catch (error) {
       console.error("Error saving package order details:", error);
       toast({ variant: 'destructive', title: 'Save Error', description: 'Failed to save package details. Please try again.' });
@@ -350,7 +296,6 @@ export default function FillPackageDetailsPage() {
     );
   }
 
-
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8 font-body">
       <header className="mb-8">
@@ -364,8 +309,9 @@ export default function FillPackageDetailsPage() {
         <AlertTitle>Important Notice: Add-on Feature Pricing</AlertTitle>
         <AlertDescription>
           <p className="mb-2">
-            Selecting add-on features below will update the "Estimated Final Total" based on their listed prices.
-            The price ranges provided here are for general information about typical market costs.
+            Selecting add-on features may incur additional costs beyond the base package price.
+            The price ranges provided here are for general information about typical market costs and are not automatically added to a total on this form.
+            Any additional costs will be discussed and confirmed with you separately.
           </p>
           <ul className="list-disc pl-5 space-y-1 text-sm">
             {informationalAddonPriceRanges.map(addon => (
@@ -443,27 +389,21 @@ export default function FillPackageDetailsPage() {
         <Card>
           <CardHeader><CardTitle>🧩 Add-on Features</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <Label>Select desired add-on features (prices will be added to total):</Label>
+            <Label>Select desired add-on features:</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ADDON_FEATURES_CONFIG.map(addon => (
-                <div key={addon.id} className="flex items-center space-x-2 p-2 border rounded-md hover:bg-muted/50">
+              {addonFeatureFields.map(fieldKey => (
+                <div key={fieldKey} className="flex items-center space-x-2 p-2 border rounded-md hover:bg-muted/50">
                   <Controller
-                    name={addon.id}
+                    name={fieldKey}
                     control={control}
-                    render={({ field }) => <Checkbox id={`func-${addon.id}`} checked={!!field.value} onCheckedChange={field.onChange} disabled={isSubmitting || isLoading}/>}
+                    render={({ field }) => <Checkbox id={`func-${fieldKey}`} checked={!!field.value} onCheckedChange={field.onChange} disabled={isSubmitting || isLoading}/>}
                   />
-                  <Label htmlFor={`func-${addon.id}`} className="flex-grow cursor-pointer">
-                    {addon.name}
-                    <span className="block text-xs text-muted-foreground">
-                      (+{currencySymbol}{addon.price[selectedCurrency].toLocaleString()})
-                    </span>
+                  <Label htmlFor={`func-${fieldKey}`} className="flex-grow cursor-pointer">
+                    {addonFeatureLabels[fieldKey]}
                   </Label>
                 </div>
               ))}
             </div>
-             <p className="text-destructive text-xs mt-1">
-                {Object.values(errors).find(err => ADDON_FEATURES_CONFIG.some(cfg => cfg.id === err?.ref?.name))?.message as string}
-            </p>
             <div><Label htmlFor="otherFeatures">Other feature requirements</Label><Textarea id="otherFeatures" {...register("otherFeatures")} disabled={isSubmitting || isLoading} /></div>
           </CardContent>
         </Card>
@@ -472,26 +412,18 @@ export default function FillPackageDetailsPage() {
           <CardHeader>
             <div className="flex items-center space-x-2">
                 <DollarSign className="h-6 w-6 text-primary" />
-                <CardTitle>💰 Estimated Pricing</CardTitle>
+                <CardTitle>💰 Budget</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-             <div className="flex justify-between">
-                <span>Base Package Price ({orderData?.selectedCurrency.toUpperCase()}):</span>
-                <span className="font-semibold">{orderData?.currencySymbol}{basePackagePrice[orderData?.selectedCurrency || 'lkr'].toLocaleString()}</span>
+          <CardContent className="space-y-3">
+             <div>
+                 <Label htmlFor="budgetRange">Your Budget Range (e.g., LKR 15,000 - 20,000 or "Around LKR 25,000")</Label>
+                 <Input id="budgetRange" {...register("budgetRange")} placeholder="Enter your budget details" disabled={isSubmitting || isLoading}/>
+                 <p className="text-destructive text-xs mt-1">{errors.budgetRange?.message}</p>
+                 <p className="text-xs text-muted-foreground mt-1">
+                    This is for your reference. The base package price is fixed as per your selection. Add-ons may incur extra costs.
+                 </p>
              </div>
-             <div className="flex justify-between">
-                <span>Selected Add-ons Total ({selectedCurrency.toUpperCase()}):</span>
-                <span className="font-semibold">{currencySymbol}{addonsTotalPrice[selectedCurrency].toLocaleString()}</span>
-             </div>
-             <hr className="my-2 border-border"/>
-             <div className="flex justify-between text-lg font-bold text-primary">
-                <span>Estimated Final Total ({selectedCurrency.toUpperCase()}):</span>
-                <span>{currencySymbol}{finalCalculatedPrice[selectedCurrency].toLocaleString()}</span>
-             </div>
-            <Input id="budgetRange" {...register("budgetRange")} readOnly className="mt-1 bg-muted/50 text-center font-semibold" />
-            <p className="text-xs text-muted-foreground text-center">This is an estimate. Final pricing will be confirmed.</p>
-             <p className="text-destructive text-xs mt-1">{errors.budgetRange?.message}</p>
           </CardContent>
         </Card>
 
@@ -526,4 +458,3 @@ export default function FillPackageDetailsPage() {
     </div>
   );
 }
-    

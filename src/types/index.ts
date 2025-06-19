@@ -105,13 +105,7 @@ export interface ProjectDetailsForm {
   agreeToShareContent: boolean;
 }
 
-export interface SelectedPackageAddon {
-  id: string;
-  name: string;
-  priceAtSubmission: Price; // Price object {lkr, usd} at the time of submission
-  selectedCurrency: Currency; // The currency in which the price was viewed/confirmed by user
-}
-
+// Reverted PackageOrderDetailsForm to simpler structure
 export interface PackageOrderDetailsForm {
   // Basic Info
   fullName: string;
@@ -150,13 +144,7 @@ export interface PackageOrderDetailsForm {
   featureChatSupport?: boolean;
   otherFeatures?: string;
   
-  // Pricing details to be saved
-  selectedAddons?: SelectedPackageAddon[];
-  addonsTotalPrice?: Price; // Total for add-ons {lkr, usd}
-  finalCalculatedPrice?: Price; // Base package + add-ons {lkr, usd}
-  // budgetRange field is now primarily for display of finalCalculatedPrice, or can be removed if not directly input
-  budgetRange: string; // This will display the calculated total, can be string for display.
-
+  budgetRange: string; // User input for budget
 
   // Notes
   businessGoalsSpecialNeeds?: string;
@@ -244,4 +232,3 @@ export interface FeatureCategory {
 }
 
 export type Currency = 'usd' | 'lkr';
-

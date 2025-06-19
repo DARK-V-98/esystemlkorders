@@ -26,22 +26,29 @@ const SectionTitle = ({ icon: Icon, title }: { icon: React.ElementType, title: s
   </div>
 );
 
-const DetailRow = ({ label, value, isLink, isPreformatted, currency, currencySymbol }: { 
+const DetailRow = ({ label, value, isLink, isPreformatted, currencySymbol, currency}: { 
     label: string, 
-    value?: string | number | boolean | string[] | Price | null, 
+    value?: string | number | boolean | string[] | Price | null, // Allow Price type
     isLink?: string, 
     isPreformatted?: boolean,
-    currency?: 'lkr' | 'usd',
-    currencySymbol?: string,
+    currencySymbol?: string, // Optional, used if value is a simple number
+    currency?: 'lkr' | 'usd' // Optional, used if value is a Price object
  }) => {
   if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)) return null;
   
   let displayValue: React.ReactNode = String(value);
-  if (typeof value === 'boolean') displayValue = value ? "Yes" : "No";
-  if (Array.isArray(value)) displayValue = value.join(', ');
-  if (typeof value === 'object' && value !== null && 'lkr' in value && 'usd' in value && currency && currencySymbol) {
+
+  if (typeof value === 'boolean') {
+    displayValue = value ? "Yes" : "No";
+  } else if (Array.isArray(value)) {
+    displayValue = value.join(', ');
+  } else if (typeof value === 'object' && 'lkr' in value && 'usd' in value && currency && currencySymbol) {
+    // Handling Price object
     const priceObj = value as Price;
     displayValue = `${currencySymbol}${priceObj[currency].toLocaleString()} ${currency.toUpperCase()}`;
+  } else if (typeof value === 'number' && currencySymbol) {
+    // Handling simple number with currency symbol
+    displayValue = `${currencySymbol}${value.toLocaleString()}`;
   }
 
 
@@ -96,58 +103,37 @@ const FunctionalityDisplay = ({ functionalities, paymentGateways }: { functional
   );
 };
 
+// Simplified display for package add-ons (boolean flags)
 const PackageAddonsDisplay = ({ details }: { details?: PackageOrderDetailsForm }) => {
-  if (!details || !details.selectedAddons || details.selectedAddons.length === 0) {
-     // Check legacy boolean fields if selectedAddons is empty
-    const legacySelectedFeatures = [];
-    if (details?.featureOnlineOrdering) legacySelectedFeatures.push("Online Ordering");
-    if (details?.featureOnlinePayments) legacySelectedFeatures.push("Online Payments");
-    // ... add all other boolean feature checks ...
-    if (details?.featureChatSupport) legacySelectedFeatures.push("Chat Support");
+  const selectedFeatures: string[] = [];
+  if (details?.featureOnlineOrdering) selectedFeatures.push("Online Ordering");
+  if (details?.featureOnlinePayments) selectedFeatures.push("Online Payments");
+  if (details?.featureContactForm) selectedFeatures.push("Contact Form");
+  if (details?.featureAdminPanel) selectedFeatures.push("Admin Panel");
+  if (details?.featureCustomerDashboard) selectedFeatures.push("Customer Dashboard");
+  if (details?.featureParcelTracking) selectedFeatures.push("Parcel Tracking");
+  if (details?.featureBooking) selectedFeatures.push("Booking System");
+  if (details?.featureBlog) selectedFeatures.push("Blog Section");
+  if (details?.featureFileDownloads) selectedFeatures.push("File Downloads");
+  if (details?.featureChatSupport) selectedFeatures.push("Chat Support");
 
-    if(legacySelectedFeatures.length > 0) {
-        return (
-            <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Selected Add-ons (Legacy):</p>
-                <ul className="list-disc list-inside space-y-1 pl-4">
-                {legacySelectedFeatures.map((func, idx) => <li key={idx} className="text-sm text-foreground">{func}</li>)}
-                </ul>
-                 {details.otherFeatures && (
-                    <div>
-                    <p className="text-sm font-medium text-muted-foreground mt-2">Other Requirements:</p>
-                    <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{details.otherFeatures}</p>
-                    </div>
-                )}
-            </div>
-        );
-    }
-    if (!details?.otherFeatures) {
-        return <p className="text-sm text-muted-foreground">No specific add-ons or other requirements selected.</p>;
-    }
+  if (selectedFeatures.length === 0 && !details?.otherFeatures) {
+    return <p className="text-sm text-muted-foreground">No specific add-ons or other requirements selected.</p>;
   }
   
   return (
     <div className="space-y-3">
-        {details.selectedAddons && details.selectedAddons.length > 0 && (
-            <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Selected Add-ons:</p>
-                <ul className="space-y-2">
-                {details.selectedAddons.map((addon, idx) => (
-                    <li key={idx} className="text-sm text-foreground border p-2 rounded-md bg-muted/30">
-                        <div className="flex justify-between items-center">
-                            <span>{addon.name}</span>
-                            <span className="font-semibold text-primary">
-                                {addon.selectedCurrency === 'lkr' ? 'Rs.' : '$'}
-                                {addon.priceAtSubmission[addon.selectedCurrency].toLocaleString()}
-                                <span className="text-xs text-muted-foreground ml-1">({addon.selectedCurrency.toUpperCase()})</span>
-                            </span>
-                        </div>
-                    </li>
-                ))}
-                </ul>
-            </div>
-        )}
-      {details.otherFeatures && (
+      {selectedFeatures.length > 0 && (
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">Selected Add-ons:</p>
+          <ul className="list-disc list-inside space-y-1 pl-4">
+            {selectedFeatures.map((featureName, idx) => (
+              <li key={idx} className="text-sm text-foreground">{featureName}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {details?.otherFeatures && (
         <div>
           <p className="text-sm font-medium text-muted-foreground mt-2">Other Requirements:</p>
           <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded-md">{details.otherFeatures}</p>
@@ -277,31 +263,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   {order.deadline && <DetailRow label="Initial Deadline" value={formatDate(order.deadline)} />}
                   <DetailRow label="Number of Pages" value={order.numberOfPages?.toString()} />
                   <DetailRow 
-                    label={isBudgetPackage && pkgDetails?.finalCalculatedPrice ? "Estimated Final Package Price" : "Base Budget/Price"} 
-                    value={
-                        isBudgetPackage && pkgDetails?.finalCalculatedPrice 
-                        ? pkgDetails.finalCalculatedPrice 
-                        : order.budget.toLocaleString() // For CustomBuild, or Package without final calc
-                    }
-                    currency={ // Pass currency only if value is Price object
-                        isBudgetPackage && pkgDetails?.finalCalculatedPrice ? order.selectedCurrency : 
-                        !isBudgetPackage ? order.selectedCurrency : undefined
-                    }
-                    currencySymbol={ // Pass symbol only if value is Price object or it's the base budget
-                        isBudgetPackage && pkgDetails?.finalCalculatedPrice ? (order.selectedCurrency === 'lkr' ? 'Rs.' : '$') :
-                        order.currencySymbol
-                    }
+                    label="Base Budget/Price" 
+                    value={order.budget}
+                    currencySymbol={order.currencySymbol}
                   />
-                  {isBudgetPackage && pkgDetails?.addonsTotalPrice && (pkgDetails.addonsTotalPrice.lkr > 0 || pkgDetails.addonsTotalPrice.usd > 0) && (
-                    <DetailRow 
-                        label="Add-ons Total" 
-                        value={pkgDetails.addonsTotalPrice}
-                        currency={order.selectedCurrency} // Assuming addons are viewed in order's main currency here
-                        currencySymbol={order.selectedCurrency === 'lkr' ? 'Rs.' : '$'}
-                    />
-                  )}
-
-
                   {order.domain && <DetailRow label="Initial Domain" value={order.domain} isLink={!order.domain.startsWith('http') ? `http://${order.domain}`: order.domain} />}
                   {order.hostingDetails && <DetailRow label="Initial Hosting Details" value={order.hostingDetails} />}
                    {order.requestedFeatures && order.requestedFeatures.length > 0 && (
@@ -312,13 +277,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                           <Card key={index} className="p-3 bg-muted/30 text-sm rounded-lg shadow-sm">
                             <div className="flex justify-between items-center">
                                 <p className="font-medium text-foreground">{feature.name}</p>
-                                {!isBudgetPackage && (
+                                {/* For package orders, individual feature prices might be 0 or not shown here */}
+                                {order.projectType !== 'Budget Package' && (
                                   <p className="font-semibold text-primary">
                                       {feature.currencySymbol}{feature.price.toLocaleString()}
                                   </p>
                                 )}
                             </div>
-                            {!isBudgetPackage && <p className="text-xs text-muted-foreground mt-1">ID: {feature.id} ({feature.currency.toUpperCase()})</p>}
+                            {order.projectType !== 'Budget Package' && <p className="text-xs text-muted-foreground mt-1">ID: {feature.id} ({feature.currency.toUpperCase()})</p>}
                           </Card>
                         ))}
                         </dd>
@@ -507,33 +473,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     </dl></CardContent>
                   </Card>
                   
-                  {pkgDetails.finalCalculatedPrice && (
-                    <Card className="border-none shadow-none bg-transparent">
-                      <CardHeader className="px-0"><SectionTitle icon={DollarSign} title="Pricing Summary" /></CardHeader>
+                  <Card className="border-none shadow-none bg-transparent">
+                      <CardHeader className="px-0"><SectionTitle icon={DollarSign} title="Budget" /></CardHeader>
                       <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
-                        <DetailRow 
-                            label="Base Package Price" 
-                            value={order.budget.toLocaleString()} // Base is always from order.budget
-                            currencySymbol={order.currencySymbol} // Use order's main currency symbol
-                        />
-                        {pkgDetails.addonsTotalPrice && (pkgDetails.addonsTotalPrice.lkr > 0 || pkgDetails.addonsTotalPrice.usd > 0) && (
-                             <DetailRow 
-                                label="Add-ons Total" 
-                                value={pkgDetails.addonsTotalPrice}
-                                currency={order.selectedCurrency} // Display in order's main currency
-                                currencySymbol={order.currencySymbol}
-                            />
-                        )}
-                        <DetailRow 
-                            label="Estimated Final Total" 
-                            value={pkgDetails.finalCalculatedPrice}
-                            currency={order.selectedCurrency} // Display in order's main currency
-                            currencySymbol={order.currencySymbol}
-                        />
+                          <DetailRow label="User Stated Budget Range" value={pkgDetails.budgetRange} />
                       </dl></CardContent>
-                    </Card>
-                  )}
-
+                  </Card>
 
                   <Card className="border-none shadow-none bg-transparent">
                     <CardHeader className="px-0"><SectionTitle icon={Star} title="Notes" /></CardHeader>
@@ -582,4 +527,3 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     </div>
   );
 }
-
