@@ -105,6 +105,13 @@ export interface ProjectDetailsForm {
   agreeToShareContent: boolean;
 }
 
+export interface SelectedPackageAddon {
+  id: string;
+  name: string;
+  priceAtSubmission: Price; // Price object {lkr, usd} at the time of submission
+  selectedCurrency: Currency; // The currency in which the price was viewed/confirmed by user
+}
+
 export interface PackageOrderDetailsForm {
   // Basic Info
   fullName: string;
@@ -130,7 +137,7 @@ export interface PackageOrderDetailsForm {
   inspirationSites?: string;
   fontAndLogoIdeas?: string;
 
-  // Features Needed
+  // Features Needed (booleans for form control)
   featureOnlineOrdering?: boolean;
   featureOnlinePayments?: boolean;
   featureContactForm?: boolean;
@@ -142,9 +149,14 @@ export interface PackageOrderDetailsForm {
   featureFileDownloads?: boolean;
   featureChatSupport?: boolean;
   otherFeatures?: string;
+  
+  // Pricing details to be saved
+  selectedAddons?: SelectedPackageAddon[];
+  addonsTotalPrice?: Price; // Total for add-ons {lkr, usd}
+  finalCalculatedPrice?: Price; // Base package + add-ons {lkr, usd}
+  // budgetRange field is now primarily for display of finalCalculatedPrice, or can be removed if not directly input
+  budgetRange: string; // This will display the calculated total, can be string for display.
 
-  // Budget
-  budgetRange: string;
 
   // Notes
   businessGoalsSpecialNeeds?: string;
@@ -167,10 +179,10 @@ export interface Order {
   deadline?: string; 
   createdDate: string; 
   contactEmail: string;
-  budget: number;
+  budget: number; // Base price of the package (in LKR for package orders)
   numberOfPages: number;
-  selectedCurrency: Currency;
-  currencySymbol: string;
+  selectedCurrency: Currency; // Currency of the base package price
+  currencySymbol: string; // Symbol of the base package price currency
   userEmail: string;
   domain?: string;
   hostingDetails?: string;
