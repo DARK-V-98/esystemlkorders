@@ -9,7 +9,8 @@ import {
     Mail, PaletteIcon, Server, Settings2, ShieldQuestion, Star, User, Users, Building, Package, Edit3, HelpCircle
 } from "lucide-react"; 
 import { Separator } from "@/components/ui/separator";
-import Image from "next/image";
+// Image component is no longer needed here
+// import Image from "next/image";
 import type { SelectedFeatureInOrder, ProjectDetailsForm, PackageOrderDetailsForm, Order, Price } from "@/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -28,11 +29,11 @@ const SectionTitle = ({ icon: Icon, title }: { icon: React.ElementType, title: s
 
 const DetailRow = ({ label, value, isLink, isPreformatted, currencySymbol, currency}: { 
     label: string, 
-    value?: string | number | boolean | string[] | Price | null, // Allow Price type
+    value?: string | number | boolean | string[] | Price | null, 
     isLink?: string, 
     isPreformatted?: boolean,
-    currencySymbol?: string, // Optional, used if value is a simple number
-    currency?: 'lkr' | 'usd' // Optional, used if value is a Price object
+    currencySymbol?: string, 
+    currency?: 'lkr' | 'usd'
  }) => {
   if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)) return null;
   
@@ -43,11 +44,9 @@ const DetailRow = ({ label, value, isLink, isPreformatted, currencySymbol, curre
   } else if (Array.isArray(value)) {
     displayValue = value.join(', ');
   } else if (typeof value === 'object' && 'lkr' in value && 'usd' in value && currency && currencySymbol) {
-    // Handling Price object
     const priceObj = value as Price;
     displayValue = `${currencySymbol}${priceObj[currency].toLocaleString()} ${currency.toUpperCase()}`;
   } else if (typeof value === 'number' && currencySymbol) {
-    // Handling simple number with currency symbol
     displayValue = `${currencySymbol}${value.toLocaleString()}`;
   }
 
@@ -103,7 +102,6 @@ const FunctionalityDisplay = ({ functionalities, paymentGateways }: { functional
   );
 };
 
-// Simplified display for package add-ons (boolean flags)
 const PackageAddonsDisplay = ({ details }: { details?: PackageOrderDetailsForm }) => {
   const selectedFeatures: string[] = [];
   if (details?.featureOnlineOrdering) selectedFeatures.push("Online Ordering");
@@ -222,32 +220,19 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       </div>
 
       <Card className="shadow-xl overflow-hidden rounded-xl">
-        <div className="relative h-40 md:h-56 w-full bg-gradient-to-r from-primary to-accent">
-           <Image
-            src="https://placehold.co/1200x350.png"
-            alt="Abstract project banner"
-            layout="fill"
-            objectFit="cover"
-            data-ai-hint="abstract gradient"
-            priority
-          />
-          <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center p-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-white text-center">{order.projectName}</h2>
-            <p className="text-primary-foreground/80 mt-1 text-center">Client: {order.clientName}</p>
-          </div>
-        </div>
-
-        <CardHeader className="border-b p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start gap-y-2">
-            <div className="flex items-center gap-3">
-                {isBudgetPackage ? <Package className="h-6 w-6 text-accent" /> : <Briefcase className="h-6 w-6 text-accent" /> }
-                <div>
-                    <p className="text-sm text-muted-foreground">Project Type</p>
-                    <p className="font-semibold text-lg">{order.projectType}</p>
-                </div>
+        {/* Image banner section removed */}
+        <CardHeader className="border-b p-6 bg-card"> {/* Added bg-card for consistency if needed */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-y-4">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-primary">{order.projectName}</h2>
+              <p className="text-muted-foreground mt-1">Client: {order.clientName}</p>
             </div>
             <OrderStatusBadge status={order.status} />
           </div>
+           <div className="mt-4 flex items-center gap-3">
+              {isBudgetPackage ? <Package className="h-5 w-5 text-accent" /> : <Briefcase className="h-5 w-5 text-accent" /> }
+              <p className="font-medium text-md">{order.projectType}</p>
+            </div>
         </CardHeader>
 
         <CardContent className="p-0">
@@ -266,6 +251,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     label="Base Budget/Price" 
                     value={order.budget}
                     currencySymbol={order.currencySymbol}
+                    currency={order.selectedCurrency} // Pass currency if 'value' is a Price object, or for simple numbers
                   />
                   {order.domain && <DetailRow label="Initial Domain" value={order.domain} isLink={!order.domain.startsWith('http') ? `http://${order.domain}`: order.domain} />}
                   {order.hostingDetails && <DetailRow label="Initial Hosting Details" value={order.hostingDetails} />}
@@ -277,7 +263,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                           <Card key={index} className="p-3 bg-muted/30 text-sm rounded-lg shadow-sm">
                             <div className="flex justify-between items-center">
                                 <p className="font-medium text-foreground">{feature.name}</p>
-                                {/* For package orders, individual feature prices might be 0 or not shown here */}
                                 {order.projectType !== 'Budget Package' && (
                                   <p className="font-semibold text-primary">
                                       {feature.currencySymbol}{feature.price.toLocaleString()}
@@ -294,7 +279,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               </AccordionContent>
             </AccordionItem>
             
-            {/* Conditional rendering for Project Details (Custom Build) */}
             {!isBudgetPackage && pd && (
             <AccordionItem value="project-details">
               <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
@@ -422,7 +406,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               </AccordionItem>
             )}
 
-            {/* Conditional rendering for Package Order Details */}
             {isBudgetPackage && pkgDetails && (
               <AccordionItem value="package-order-details">
                 <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
@@ -527,3 +510,4 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     </div>
   );
 }
+
