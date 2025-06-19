@@ -1,54 +1,132 @@
 
-export type OrderStatus = 
-  | 'Pending' 
-  | 'In Progress' 
-  | 'Review' 
-  | 'Completed' 
+
+export type OrderStatus =
+  | 'Pending'
+  | 'In Progress'
+  | 'Review'
+  | 'Completed'
   | 'Cancelled'
-  | 'Rejected'       // New
-  | 'Developing'     // New
-  | 'Waiting for Payment' // New
-  | 'Suspended';     // New
+  | 'Rejected'
+  | 'Developing'
+  | 'Waiting for Payment'
+  | 'Suspended';
 
-export type ProjectType = 'New Website' | 'Redesign' | 'Feature Enhancement' | 'Maintenance' | 'Custom Build'; // Added 'Custom Build'
+export type ProjectType = 'New Website' | 'Redesign' | 'Feature Enhancement' | 'Maintenance' | 'Custom Build';
 
-// For custom website form
 export interface CustomerDetailsForm {
   name: string;
   email: string;
   projectName: string;
   projectDescription: string;
-  numberOfPages: string; // String from form input
+  numberOfPages: string;
 }
 
-// For storing selected features in an order
 export interface SelectedFeatureInOrder {
   id: string;
   name: string;
-  price: number; // Price in the selected currency at the time of order
+  price: number;
   currency: Currency;
   currencySymbol: string;
 }
 
+export interface ProjectDetailsForm {
+  // Client & Personal Information
+  fullName: string;
+  nicNumber: string;
+  contactEmail: string;
+  phoneNumber: string;
+  address: string;
+
+  // Business Details (optional)
+  companyName?: string;
+  businessRegNumber?: string;
+  companyAddress?: string;
+  companyContactNumber?: string;
+  companyEmail?: string;
+  companyLogoUrl?: string; // URL for logo
+
+  // Website Details
+  desiredWebsiteName: string;
+  hasDomain: 'Yes' | 'No';
+  domainName?: string;
+  hasHosting: 'Yes' | 'No';
+  hostingProviderName?: string;
+  needsBusinessEmails: 'Yes' | 'No';
+  businessEmailCount?: number;
+
+  // Design Preferences
+  preferredBaseColors: string;
+  themeStyle: 'Modern' | 'Minimal' | 'Classic' | 'Playful' | 'Elegant' | 'Other';
+  themeStyleOther?: string;
+  inspirationWebsites?: string;
+  fontPreferences?: string;
+  logoColors?: string;
+  otherDesignInstructions?: string;
+
+  // Functionality & Features
+  functionalities?: {
+    onlineOrdering?: boolean;
+    paymentGateway?: boolean;
+    contactForm?: boolean;
+    blogSection?: boolean;
+    customerDashboard?: boolean;
+    adminDashboard?: boolean;
+    imageVideoGallery?: boolean;
+    parcelTracking?: boolean;
+    bookingSystem?: boolean;
+    inventoryManagement?: boolean;
+    testimonialsSection?: boolean;
+    fileDownloads?: boolean;
+    chatIntegration?: boolean;
+  };
+  paymentGatewaysSelected?: Array<'PayHere' | 'Stripe' | 'PayPal'>;
+  otherFeatureRequirements?: string;
+
+  // Content & Pages
+  pageList: string;
+  hasPageContent: 'Yes' | 'No';
+  wantsContentWriting: 'Yes' | 'No';
+  hasImagesReady: 'Yes' | 'No';
+  imageSourceUrl?: string; // URL for images
+
+  // Legal & Docs
+  hasLegalDocs: 'Yes' | 'No';
+  legalDocsSourceUrl?: string; // URL for legal documents
+
+  // Timeline & Budget
+  preferredLaunchDate?: string; // ISO string representation of date
+  projectBudget: string;
+
+  // Extra Notes
+  businessDescriptionGoals: string;
+  specialInstructions?: string;
+
+  // Final Consent
+  confirmDetailsAccurate: boolean;
+  agreeToShareContent: boolean;
+}
+
+
 export interface Order {
-  id: string; // Firestore document ID
-  formattedOrderId: string; // User-facing formatted ID (e.g., A123456789)
-  clientName: string; // From form: customerDetails.name
-  projectName: string; // From form: customerDetails.projectName
-  projectType: ProjectType; // Will be 'Custom Build' for these orders
-  status: OrderStatus; // Default to 'Pending'
-  description: string; // From form: customerDetails.projectDescription
-  requestedFeatures: SelectedFeatureInOrder[]; // Structured list of features
-  deadline?: string; // ISO date string, might be set later
-  createdDate: string; // ISO date string (converted from Firestore Timestamp)
-  contactEmail: string; // From form: customerDetails.email
-  budget: number; // This will be the totalPrice from the form
-  numberOfPages: number; // Parsed from form
-  selectedCurrency: Currency; // usd or lkr
-  currencySymbol: string; // $ or Rs.
-  userEmail: string; // Email of the logged-in user who submitted
-  domain?: string; // Optional, from original Order type
-  hostingDetails?: string; // Optional, from original Order type
+  id: string;
+  formattedOrderId: string;
+  clientName: string;
+  projectName: string;
+  projectType: ProjectType;
+  status: OrderStatus;
+  description: string;
+  requestedFeatures: SelectedFeatureInOrder[];
+  deadline?: string; // ISO string representation of date
+  createdDate: string; // ISO string representation of date
+  contactEmail: string;
+  budget: number;
+  numberOfPages: number;
+  selectedCurrency: Currency;
+  currencySymbol: string;
+  userEmail: string;
+  domain?: string;
+  hostingDetails?: string;
+  projectDetails?: ProjectDetailsForm; // Added field
 }
 
 export interface OrderFilters {
@@ -70,7 +148,6 @@ export interface AuthUser {
   role?: 'user' | 'developer' | 'admin' | string;
 }
 
-// From custom-website page, for consistency (can be merged or refined later)
 export interface Price {
   usd: number;
   lkr: number;
@@ -92,6 +169,5 @@ export interface FeatureCategory {
   features: FeatureOption[];
 }
 
-// For currency context
 export type Currency = 'usd' | 'lkr';
 

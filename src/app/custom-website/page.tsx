@@ -14,12 +14,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from '@/contexts/currency-context';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { FeatureCategory, FeatureOption, Price, CustomerDetailsForm as CustomerFormDetails, SelectedFeatureInOrder, Order } from '@/types'; // Adjusted import
-import { Loader2 } from 'lucide-react';
-import { generateFormattedOrderId } from '@/lib/utils'; // Import the new ID generator
+import { collection, addDoc, serverTimestamp, type DocumentReference, getDocs, doc, getDoc } from 'firebase/firestore';
+import type { FeatureCategory, FeatureOption, Price, CustomerDetailsForm as CustomerFormDetails, SelectedFeatureInOrder, Order } from '@/types';
+import { Loader2, ExternalLink } from 'lucide-react';
+import { generateFormattedOrderId } from '@/lib/utils';
+import Link from "next/link";
 
-// Default data (could be fetched from Firestore in a real app for admin management)
 export const DEFAULT_PRICE_PER_PAGE: Price = { usd: 50, lkr: 15000 };
 
 export const DEFAULT_FEATURE_CATEGORIES: FeatureCategory[] = [
@@ -71,12 +71,15 @@ export const DEFAULT_FEATURE_CATEGORIES: FeatureCategory[] = [
   },
 ];
 
+const FEATURES_COLLECTION = 'siteFeaturesConfig';
+const GLOBAL_PRICING_COLLECTION = 'siteGlobalConfig';
+const PAGE_PRICE_DOC_ID = 'pagePricing';
+
 
 export default function MakeCustomWebsitePage() {
   const [featureCategories, setFeatureCategories] = useState<FeatureCategory[]>(DEFAULT_FEATURE_CATEGORIES);
   const [pricePerPage, setPricePerPage] = useState<Price>(DEFAULT_PRICE_PER_PAGE);
-  // In a real app, you'd fetch featureCategories and pricePerPage from Firestore here
-  // For now, we use the defaults.
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
   const [selectedFeatures, setSelectedFeatures] = useState<Record<string, boolean>>({});
   const [totalPrice, setTotalPrice] = useState<number>(0);
@@ -93,6 +96,49 @@ export default function MakeCustomWebsitePage() {
   const { user } = useAuth();
 
   useEffect(() => {
+    const fetchPricesFromFirestore = async () => {
+      setIsLoadingPrices(true);
+      try {
+        const categoriesSnapshot = await getDocs(collection(db, FEATURES_COLLECTION));
+        const fetchedCategoriesData: FeatureCategory[] = categoriesSnapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...(docSnap.data() as Omit<FeatureCategory, 'id'>),
+        }));
+        
+        if (fetchedCategoriesData.length > 0) {
+          const sortedFetchedCategories = DEFAULT_FEATURE_CATEGORIES.map(defaultCat => {
+            const foundCat = fetchedCategoriesData.find(fetchedCat => fetchedCat.id === defaultCat.id);
+            return foundCat || defaultCat; 
+          }).filter(cat => cat);
+          setFeatureCategories(sortedFetchedCategories);
+        } else {
+          setFeatureCategories(DEFAULT_FEATURE_CATEGORIES);
+        }
+
+        const pagePriceSnap = await getDoc(doc(db, GLOBAL_PRICING_COLLECTION, PAGE_PRICE_DOC_ID));
+        if (pagePriceSnap.exists()) {
+          setPricePerPage(pagePriceSnap.data().pricePerPage as Price);
+        } else {
+          setPricePerPage(DEFAULT_PRICE_PER_PAGE);
+        }
+
+      } catch (error) {
+        console.error("Error fetching prices from Firestore:", error);
+        // Fallback to defaults if Firestore fetch fails
+        setFeatureCategories(DEFAULT_FEATURE_CATEGORIES);
+        setPricePerPage(DEFAULT_PRICE_PER_PAGE);
+        toast({ variant: "destructive", title: "Price Load Error", description: "Could not load latest prices. Using defaults."});
+      } finally {
+        setIsLoadingPrices(false);
+      }
+    };
+    fetchPricesFromFirestore();
+  }, [toast]);
+
+
+  useEffect(() => {
+    if (isLoadingPrices) return; // Don't calculate price until prices are loaded
+
     let currentTotal = 0;
     featureCategories.forEach(category => {
       category.features.forEach(feature => {
@@ -106,7 +152,7 @@ export default function MakeCustomWebsitePage() {
       currentTotal += numPages * pricePerPage[selectedCurrency];
     }
     setTotalPrice(currentTotal);
-  }, [selectedFeatures, customerDetails.numberOfPages, selectedCurrency, featureCategories, pricePerPage]);
+  }, [selectedFeatures, customerDetails.numberOfPages, selectedCurrency, featureCategories, pricePerPage, isLoadingPrices]);
 
   const handleFeatureToggle = (featureId: string) => {
     setSelectedFeatures(prev => ({
@@ -169,7 +215,7 @@ export default function MakeCustomWebsitePage() {
       setIsSubmitting(false);
       return;
     }
-    if (isNaN(numPages) || numPages < 0) { // Allow 0 pages if only features are selected
+    if (isNaN(numPages) || numPages < 0) {
       toast({
         variant: "destructive",
         title: "Invalid Number of Pages",
@@ -181,7 +227,7 @@ export default function MakeCustomWebsitePage() {
     
     const formattedOrderId = generateFormattedOrderId();
 
-    const orderData: Omit<Order, 'id' | 'createdDate' | 'deadline'> & { createdDate: any } = {
+    const orderData: Omit<Order, 'id' | 'createdDate' | 'deadline' | 'projectDetails'> & { createdDate: any } = {
       formattedOrderId: formattedOrderId,
       clientName: customerDetails.name,
       projectName: customerDetails.projectName,
@@ -199,11 +245,23 @@ export default function MakeCustomWebsitePage() {
     };
 
     try {
-      // Firestore will auto-generate the document ID ('id' in our Order type)
-      await addDoc(collection(db, "orders"), orderData);
+      const docRef = await addDoc(collection(db, "orders"), orderData) as DocumentReference;
+      const newOrderId = docRef.id; 
+
       toast({
-        title: "Request Submitted!",
-        description: `Your custom website request for "${customerDetails.projectName}" (Order ID: ${formattedOrderId}) has been submitted. Total (${selectedCurrency.toUpperCase()}): ${currencySymbol}${totalPrice.toLocaleString()}. We'll be in touch!`,
+        title: "Request Submitted! Next Step: Project Details",
+        description: (
+          <div>
+            <p>Your custom website request for "{customerDetails.projectName}" (Order ID: {formattedOrderId}) has been submitted. Total ({selectedCurrency.toUpperCase()}): {currencySymbol}{totalPrice.toLocaleString()}.</p>
+            <p className="mt-2">Please proceed to fill out the detailed project specifications.</p>
+            <Button asChild variant="link" className="p-0 h-auto mt-1 text-accent hover:underline">
+              <Link href={`/fill-project-details/${newOrderId}`}>
+                Go to Project Details Form <ExternalLink className="ml-1.5 h-3 w-3" />
+              </Link>
+            </Button>
+          </div>
+        ),
+        duration: 15000, 
       });
       setSelectedFeatures({});
       setCustomerDetails({ name: '', email: '', projectName: '', projectDescription: '', numberOfPages: '1' });
@@ -218,10 +276,19 @@ export default function MakeCustomWebsitePage() {
       setIsSubmitting(false);
     }
   };
+  
+  if (isLoadingPrices) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4">Loading pricing information...</p>
+      </div>
+    );
+  }
+
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
-      {/* Combined Header and Top Right Total Display */}
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8 font-body">
       <div className="relative">
         <div className="flex flex-col md:flex-row justify-between md:items-start gap-6 mb-6">
           <header className="flex-grow text-center md:text-left">
@@ -236,7 +303,6 @@ export default function MakeCustomWebsitePage() {
             </p>
           </header>
 
-          {/* Top Right Sticky Total - Visible on MD and up */}
           <div className="hidden md:block p-4 shadow-lg rounded-xl bg-card border border-border sticky top-6 z-20 self-start md:min-w-[280px]">
             <div className="flex items-center space-x-2 mb-1">
               <DynamicIcon name="DollarSign" className="h-5 w-5 text-primary" />
@@ -410,7 +476,7 @@ export default function MakeCustomWebsitePage() {
             <CardFooter className="flex justify-end p-6 bg-muted/30">
               <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                Submit Custom Website Request
+                Submit Request & Proceed to Details
               </Button>
             </CardFooter>
           </Card>
@@ -419,3 +485,4 @@ export default function MakeCustomWebsitePage() {
     </div>
   );
 }
+

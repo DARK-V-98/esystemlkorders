@@ -4,17 +4,103 @@ import { OrderStatusBadge } from "@/components/order-status-badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, DollarSign, Briefcase, Users, Mail, Globe, Server, ListChecks, FileText, Package, User, Tag, HelpCircle } from "lucide-react";
+import { 
+    ArrowLeft, Briefcase, CheckSquare, Clock, DollarSign, FileText, FileType, Globe, Info, ListChecks, 
+    Mail, PaletteIcon, Server, Settings2, ShieldQuestion, Star, User, Users, Building 
+} from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
-import type { SelectedFeatureInOrder } from "@/types";
+import type { SelectedFeatureInOrder, ProjectDetailsForm } from "@/types";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 interface OrderDetailPageProps {
   params: {
-    orderId: string; // This is the Firestore document ID
+    orderId: string;
   };
 }
+
+const SectionTitle = ({ icon: Icon, title }: { icon: React.ElementType, title: string }) => (
+  <div className="flex items-center text-xl font-semibold text-primary mb-3">
+    <Icon className="mr-2 h-5 w-5" /> {title}
+  </div>
+);
+
+const DetailRow = ({ label, value, isLink, isPreformatted }: { label: string, value?: string | number | boolean | string[] | null, isLink?: string, isPreformatted?: boolean }) => {
+  if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0)) return null;
+  
+  let displayValue: React.ReactNode = String(value);
+  if (typeof value === 'boolean') displayValue = value ? "Yes" : "No";
+  if (Array.isArray(value)) displayValue = value.join(', ');
+
+  return (
+    <div className="py-3 grid grid-cols-1 md:grid-cols-3 gap-2 items-start border-b border-border last:border-b-0">
+      <dt className="text-sm font-medium text-muted-foreground">{label}:</dt>
+      <dd className="text-sm text-foreground md:col-span-2">
+        {isLink && typeof value === 'string' && value.startsWith('http') ? (
+          <a href={value} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline break-all">
+            {displayValue}
+          </a>
+        ) : isLink && typeof value === 'string' && !value.startsWith('http') && value.includes('@') ? ( // Basic email check
+           <a href={`mailto:${value}`} className="text-accent hover:underline break-all">
+            {displayValue}
+          </a>
+        ) : isPreformatted ? (
+          <pre className="whitespace-pre-wrap font-body text-sm bg-muted/30 p-2 rounded-md">{displayValue}</pre>
+        ) : (
+          <span className="break-words">{displayValue}</span>
+        )}
+      </dd>
+    </div>
+  );
+};
+
+
+const FunctionalityDisplay = ({ functionalities, paymentGateways }: { functionalities?: ProjectDetailsForm['functionalities'], paymentGateways?: string[] }) => {
+  if (!functionalities || Object.values(functionalities).every(v => !v)) {
+    return <p className="text-sm text-muted-foreground">No specific functionalities selected.</p>;
+  }
+
+  const selectedFunctionalities = Object.entries(functionalities)
+    .filter(([, value]) => value)
+    .map(([key]) => {
+      // Find the label from functionalityOptions or format the key
+      const option = functionalityOptions.find(opt => opt.id === key);
+      let formattedKey = option ? option.label : key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+      
+      if (key === 'paymentGateway' && paymentGateways && paymentGateways.length > 0) {
+        return `${formattedKey} (Gateways: ${paymentGateways.join(', ')})`;
+      }
+      return formattedKey;
+    });
+    
+  if (selectedFunctionalities.length === 0) {
+    return <p className="text-sm text-muted-foreground">No specific functionalities selected.</p>;
+  }
+
+  return (
+    <ul className="list-disc list-inside space-y-1 pl-4">
+      {selectedFunctionalities.map((func, idx) => <li key={idx} className="text-sm text-foreground">{func}</li>)}
+    </ul>
+  );
+};
+
+const functionalityOptions = [ // Copied from fill-project-details for label mapping
+  { id: 'onlineOrdering', label: 'Online Ordering/E-commerce' },
+  { id: 'paymentGateway', label: 'Payment Gateway Integration' },
+  { id: 'contactForm', label: 'Contact Form' },
+  { id: 'blogSection', label: 'Blog or News Section' },
+  { id: 'customerDashboard', label: 'Customer Dashboard' },
+  { id: 'adminDashboard', label: 'Admin Dashboard' },
+  { id: 'imageVideoGallery', label: 'Image/Video Gallery' },
+  { id: 'parcelTracking', label: 'Parcel Tracking System' },
+  { id: 'bookingSystem', label: 'Booking/Reservation System' },
+  { id: 'inventoryManagement', label: 'Inventory Management' },
+  { id: 'testimonialsSection', label: 'Testimonials Section' },
+  { id: 'fileDownloads', label: 'File Downloads Section' },
+  { id: 'chatIntegration', label: 'Chat/Messenger Integration' },
+] as const;
+
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const order = await fetchOrderById(params.orderId);
@@ -43,14 +129,15 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     );
   }
 
+  const pd = order.projectDetails;
+
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8 font-body">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline text-primary">
             Order Details
           </h1>
-          {/* Display formattedOrderId to the user */}
           <p className="text-muted-foreground">ID: {order.formattedOrderId}</p>
         </div>
         <Button asChild variant="outline">
@@ -89,54 +176,179 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </div>
         </CardHeader>
 
-        <CardContent className="p-6 grid md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-          <div className="space-y-4 lg:col-span-2">
-            <h3 className="text-xl font-semibold text-accent flex items-center mb-3">
-              <FileText className="mr-2 h-5 w-5"/> Project & Client Information
-            </h3>
-            <DetailItem icon={User} label="Client Name" value={order.clientName} />
-            <DetailItem icon={Mail} label="Contact Email" value={order.contactEmail} isLink={`mailto:${order.contactEmail}`} />
-            {order.userEmail && <DetailItem icon={User} label="Submitted By (User Email)" value={order.userEmail} />}
-            <DetailItem icon={HelpCircle} label="Project Description" value={order.description || "No description provided."} className="text-sm leading-relaxed whitespace-pre-wrap" />
-            <DetailItem icon={CalendarDays} label="Created Date" value={formatDate(order.createdDate)} />
-            {order.deadline && <DetailItem icon={CalendarDays} label="Deadline" value={formatDate(order.deadline)} />}
-            <DetailItem icon={Package} label="Number of Pages" value={order.numberOfPages?.toString()} />
-            <DetailItem icon={DollarSign} label="Total Budget" value={`${order.currencySymbol}${order.budget.toLocaleString()} ${order.selectedCurrency.toUpperCase()}`} />
-            {order.domain && <DetailItem icon={Globe} label="Domain" value={order.domain} isLink={!order.domain.startsWith('http') ? `http://${order.domain}`: order.domain} />}
-            {order.hostingDetails && <DetailItem icon={Server} label="Hosting Details" value={order.hostingDetails} />}
-          </div>
-
-          <div className="space-y-4 lg:col-span-1 border-t md:border-t-0 md:border-l md:pl-8 pt-6 md:pt-0">
-            <h3 className="text-xl font-semibold text-accent flex items-center mb-3">
-              <ListChecks className="mr-2 h-5 w-5"/>
-              Requested Features 
-              {order.requestedFeatures && order.requestedFeatures.length > 0 ? ` (${order.requestedFeatures.length})` : ''}
-            </h3>
-            {order.requestedFeatures && order.requestedFeatures.length > 0 ? (
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                {order.requestedFeatures.map((feature: SelectedFeatureInOrder, index) => (
-                  <Card key={index} className="p-3 bg-muted/30 text-sm rounded-lg shadow-sm">
-                    <div className="flex justify-between items-center">
-                        <p className="font-medium text-foreground">{feature.name}</p>
-                        <p className="font-semibold text-primary">
-                            {feature.currencySymbol}{feature.price.toLocaleString()}
-                        </p>
+        <CardContent className="p-0">
+          <Accordion type="multiple" defaultValue={['core-info', pd ? 'project-details' : 'fill-details-prompt'].filter(Boolean) as string[]} className="w-full">
+            <AccordionItem value="core-info">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
+                <div className="flex items-center"> <Info className="mr-2 h-5 w-5 text-primary" /> Core Order Information</div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-4 pt-2">
+                <dl className="divide-y divide-border">
+                  <DetailRow label="Initial Project Description" value={order.description || "No description provided."} isPreformatted/>
+                  <DetailRow label="Created Date" value={formatDate(order.createdDate, 'PPpp')} />
+                  {order.deadline && <DetailRow label="Initial Deadline" value={formatDate(order.deadline)} />}
+                  <DetailRow label="Number of Pages" value={order.numberOfPages?.toString()} />
+                  <DetailRow label="Total Budget" value={`${order.currencySymbol}${order.budget.toLocaleString()} ${order.selectedCurrency.toUpperCase()}`} />
+                  {order.domain && <DetailRow label="Initial Domain" value={order.domain} isLink={!order.domain.startsWith('http') ? `http://${order.domain}`: order.domain} />}
+                  {order.hostingDetails && <DetailRow label="Initial Hosting Details" value={order.hostingDetails} />}
+                   {order.requestedFeatures && order.requestedFeatures.length > 0 && (
+                    <div className="py-3 border-b border-border last:border-b-0">
+                        <dt className="text-sm font-medium text-muted-foreground mb-2">Initially Requested Features ({order.requestedFeatures.length}):</dt>
+                        <dd className="text-sm text-foreground col-span-2 space-y-2">
+                        {order.requestedFeatures.map((feature: SelectedFeatureInOrder, index) => (
+                          <Card key={index} className="p-3 bg-muted/30 text-sm rounded-lg shadow-sm">
+                            <div className="flex justify-between items-center">
+                                <p className="font-medium text-foreground">{feature.name}</p>
+                                <p className="font-semibold text-primary">
+                                    {feature.currencySymbol}{feature.price.toLocaleString()}
+                                </p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">ID: {feature.id} ({feature.currency.toUpperCase()})</p>
+                          </Card>
+                        ))}
+                        </dd>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">ID: {feature.id} ({feature.currency.toUpperCase()})</p>
+                    )}
+                </dl>
+              </AccordionContent>
+            </AccordionItem>
+            
+            {pd && (
+            <AccordionItem value="project-details">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline px-6 py-4">
+                <div className="flex items-center"> <FileText className="mr-2 h-5 w-5 text-primary" /> Detailed Project Specifications</div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-4 pt-2 space-y-6">
+                <Card className="border-none shadow-none bg-transparent">
+                  <CardHeader className="px-0 pt-0"><SectionTitle icon={User} title="Client & Personal Information" /></CardHeader>
+                  <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                    <DetailRow label="Full Name" value={pd.fullName} />
+                    <DetailRow label="NIC Number" value={pd.nicNumber} />
+                    <DetailRow label="Contact Email" value={pd.contactEmail} isLink={pd.contactEmail} />
+                    <DetailRow label="Phone Number" value={pd.phoneNumber} />
+                    <DetailRow label="Address" value={pd.address} isPreformatted />
+                  </dl></CardContent>
+                </Card>
+
+                {(pd.companyName || pd.businessRegNumber || pd.companyAddress || pd.companyContactNumber || pd.companyEmail || pd.companyLogoUrl) && (
+                  <Card className="border-none shadow-none bg-transparent">
+                    <CardHeader className="px-0"><SectionTitle icon={Building} title="Business Details" /></CardHeader>
+                    <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                      <DetailRow label="Company Name" value={pd.companyName} />
+                      <DetailRow label="Business Reg. No." value={pd.businessRegNumber} />
+                      <DetailRow label="Company Address" value={pd.companyAddress} isPreformatted />
+                      <DetailRow label="Company Contact No." value={pd.companyContactNumber} />
+                      <DetailRow label="Company Email" value={pd.companyEmail} isLink={pd.companyEmail} />
+                      <DetailRow label="Company Logo URL" value={pd.companyLogoUrl} isLink={pd.companyLogoUrl} />
+                    </dl></CardContent>
                   </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">No specific features were selected for this order.</p>
+                )}
+
+                <Card className="border-none shadow-none bg-transparent">
+                  <CardHeader className="px-0"><SectionTitle icon={Globe} title="Website Details" /></CardHeader>
+                  <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                    <DetailRow label="Desired Website Name" value={pd.desiredWebsiteName} />
+                    <DetailRow label="Has Domain?" value={pd.hasDomain} />
+                    {pd.hasDomain === 'Yes' && <DetailRow label="Domain Name" value={pd.domainName} isLink={pd.domainName && !pd.domainName.startsWith('http') ? `http://${pd.domainName}` : pd.domainName} />}
+                    <DetailRow label="Has Hosting?" value={pd.hasHosting} />
+                    {pd.hasHosting === 'Yes' && <DetailRow label="Hosting Provider" value={pd.hostingProviderName} />}
+                    <DetailRow label="Needs Business Emails?" value={pd.needsBusinessEmails} />
+                    {pd.needsBusinessEmails === 'Yes' && <DetailRow label="No. of Business Emails" value={pd.businessEmailCount?.toString()} />}
+                  </dl></CardContent>
+                </Card>
+
+                <Card className="border-none shadow-none bg-transparent">
+                  <CardHeader className="px-0"><SectionTitle icon={PaletteIcon} title="Design Preferences" /></CardHeader>
+                  <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                    <DetailRow label="Preferred Base Colors" value={pd.preferredBaseColors} />
+                    <DetailRow label="Theme Style" value={pd.themeStyle === 'Other' && pd.themeStyleOther ? `Other: ${pd.themeStyleOther}`: pd.themeStyle} />
+                    <DetailRow label="Inspiration Websites" value={pd.inspirationWebsites} isPreformatted/>
+                    <DetailRow label="Font Preferences" value={pd.fontPreferences} isPreformatted/>
+                    <DetailRow label="Logo Colors" value={pd.logoColors} />
+                    <DetailRow label="Other Design Instructions" value={pd.otherDesignInstructions} isPreformatted/>
+                  </dl></CardContent>
+                </Card>
+
+                <Card className="border-none shadow-none bg-transparent">
+                  <CardHeader className="px-0"><SectionTitle icon={Settings2} title="Functionality & Features" /></CardHeader>
+                  <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                    <div className="py-3 border-b border-border last:border-b-0">
+                      <dt className="text-sm font-medium text-muted-foreground mb-2">Selected Functionalities:</dt>
+                      <dd><FunctionalityDisplay functionalities={pd.functionalities} paymentGateways={pd.paymentGatewaysSelected} /></dd>
+                    </div>
+                    <DetailRow label="Other Feature Requirements" value={pd.otherFeatureRequirements} isPreformatted/>
+                  </dl></CardContent>
+                </Card>
+
+                <Card className="border-none shadow-none bg-transparent">
+                  <CardHeader className="px-0"><SectionTitle icon={FileType} title="Content & Pages" /></CardHeader>
+                  <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                    <DetailRow label="List of Pages" value={pd.pageList} isPreformatted/>
+                    <DetailRow label="Has Page Content?" value={pd.hasPageContent} />
+                    <DetailRow label="Wants Content Writing?" value={pd.wantsContentWriting} />
+                    <DetailRow label="Has Images Ready?" value={pd.hasImagesReady} />
+                    <DetailRow label="Image Source URL" value={pd.imageSourceUrl} isLink={pd.imageSourceUrl} />
+                  </dl></CardContent>
+                </Card>
+                
+                <Card className="border-none shadow-none bg-transparent">
+                  <CardHeader className="px-0"><SectionTitle icon={ShieldQuestion} title="Legal & Documents" /></CardHeader>
+                  <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                    <DetailRow label="Has Legal Docs (T&C, Privacy)?" value={pd.hasLegalDocs} />
+                    <DetailRow label="Legal Docs Source URL" value={pd.legalDocsSourceUrl} isLink={pd.legalDocsSourceUrl} />
+                  </dl></CardContent>
+                </Card>
+
+                <Card className="border-none shadow-none bg-transparent">
+                  <CardHeader className="px-0"><SectionTitle icon={Clock} title="Timeline & Budget" /></CardHeader>
+                  <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                    <DetailRow label="Preferred Launch Date" value={pd.preferredLaunchDate ? formatDate(pd.preferredLaunchDate) : 'Not specified'} />
+                    <DetailRow label="Project Budget" value={pd.projectBudget} />
+                  </dl></CardContent>
+                </Card>
+
+                <Card className="border-none shadow-none bg-transparent">
+                  <CardHeader className="px-0"><SectionTitle icon={Star} title="Extra Notes" /></CardHeader>
+                  <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                    <DetailRow label="Business Description & Goals" value={pd.businessDescriptionGoals} isPreformatted/>
+                    <DetailRow label="Special Instructions" value={pd.specialInstructions} isPreformatted/>
+                  </dl></CardContent>
+                </Card>
+                
+                <Card className="border-none shadow-none bg-transparent">
+                   <CardHeader className="px-0"><SectionTitle icon={CheckSquare} title="Consent" /></CardHeader>
+                   <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
+                        <DetailRow label="Confirmed Details Accurate" value={pd.confirmDetailsAccurate} />
+                        <DetailRow label="Agreed to Share Content/Feedback" value={pd.agreeToShareContent} />
+                   </dl></CardContent>
+                </Card>
+
+              </AccordionContent>
+            </AccordionItem>
             )}
-          </div>
+            {!pd && (
+              <AccordionItem value="fill-details-prompt" className="border-t">
+                <AccordionContent className="px-6 py-4 bg-muted/20">
+                    <div className="text-center text-muted-foreground">
+                        <p className="mb-3 text-base">No detailed project specifications have been submitted for this order yet.</p>
+                        <Button asChild variant="default" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                            <Link href={`/fill-project-details/${order.id}`}>
+                                Click here to fill out the Project Details Form
+                            </Link>
+                        </Button>
+                    </div>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+          </Accordion>
         </CardContent>
 
-        <CardFooter className="bg-muted/50 p-6 flex flex-col sm:flex-row justify-between items-center gap-3">
-           {/* Display formattedOrderId in footer */}
+        <CardFooter className="bg-muted/50 p-6 flex flex-col sm:flex-row justify-between items-center gap-3 border-t">
            <p className="text-xs text-muted-foreground">Order ID: {order.formattedOrderId}</p>
-           <Button variant="default" className="bg-accent hover:bg-accent/90 w-full sm:w-auto">
-              <Mail className="mr-2 h-4 w-4" /> Contact Client
+           <Button variant="default" className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto" asChild>
+              <a href={`mailto:${order.contactEmail}`}>
+                <Mail className="mr-2 h-4 w-4" /> Contact Client ({order.contactEmail})
+              </a>
            </Button>
         </CardFooter>
       </Card>
@@ -144,29 +356,3 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   );
 }
 
-interface DetailItemProps {
-  icon: React.ElementType;
-  label: string;
-  value: string | number | undefined;
-  className?: string;
-  isLink?: string;
-}
-
-function DetailItem({ icon: Icon, label, value, className, isLink }: DetailItemProps) {
-  if (value === undefined || value === null || value === '') return null;
-  return (
-    <div className="flex items-start space-x-3">
-      <Icon className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-      <div>
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
-        {isLink ? (
-          <a href={isLink} target="_blank" rel="noopener noreferrer" className={cn("text-foreground hover:underline", className)}>
-            {value}
-          </a>
-        ) : (
-          <p className={cn("text-foreground", className)}>{value}</p>
-        )}
-      </div>
-    </div>
-  );
-}
