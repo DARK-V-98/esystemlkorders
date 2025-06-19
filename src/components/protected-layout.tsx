@@ -6,8 +6,10 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"; // Added SidebarTrigger
 import { SidebarNavigation } from "@/components/sidebar-navigation";
+import Image from 'next/image'; // Added Image
+import Link from 'next/link'; // Added Link
 
 export function ProtectedLayoutContent({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -23,13 +25,8 @@ export function ProtectedLayoutContent({ children }: { children: ReactNode }) {
     if (!user && pathname !== '/login') {
       router.push('/login');
     } else if (user && isAdminRoute && !allowedAdminRoles.includes(user.role || '')) {
-      // If user is trying to access /admin but doesn't have the role
-      router.push('/menu'); // Or an unauthorized page
+      router.push('/menu'); 
     }
-    // Optional: If user is logged in and tries to access /login, redirect to home
-    // if (user && pathname === '/login') {
-    //   router.push('/menu'); 
-    // }
   }, [user, loading, pathname, router]);
 
   if (loading) {
@@ -54,13 +51,9 @@ export function ProtectedLayoutContent({ children }: { children: ReactNode }) {
   }
 
   if (user) {
-    // Additional check for admin route access if user somehow bypasses initial redirect
     const isAdminRoute = pathname.startsWith('/admin');
     const allowedAdminRoles = ['admin', 'developer'];
     if (isAdminRoute && !allowedAdminRoles.includes(user.role || '')) {
-      // This is a fallback, primary redirection is in useEffect
-      // You might want to show an "Unauthorized" component here or redirect again
-      // For now, returning null or a loader can prevent rendering admin content
       return (
         <div className="flex min-h-screen items-center justify-center bg-background">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -71,11 +64,23 @@ export function ProtectedLayoutContent({ children }: { children: ReactNode }) {
 
     return (
       <SidebarProvider defaultOpen={true}>
-        <div className="flex min-h-screen bg-background">
-          <SidebarNavigation />
-          <SidebarInset className="flex-1 flex flex-col">
-            {children}
-          </SidebarInset>
+        <div className="flex min-h-screen bg-background"> {/* This is group/sidebar-wrapper */}
+          <SidebarNavigation /> {/* This is the Sidebar component instance */}
+          <div className="flex flex-1 flex-col overflow-hidden"> {/* Main wrapper for header and content */}
+            {/* Mobile-only Header */}
+            <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-4 md:hidden">
+              <SidebarTrigger /> {/* Will render hamburger icon on mobile */}
+              <Link href="/menu" className="flex items-center gap-2">
+                  <Image src="/logo.png" alt="eSystemLK Logo" width={28} height={28} data-ai-hint="company logo"/>
+                  <span className="font-semibold text-lg text-primary">eSystemLK</span>
+              </Link>
+            </header>
+            {/* Main content area */}
+            <main className="flex-1 overflow-x-hidden overflow-y-auto">
+              {/* Children pages typically have their own padding, e.g., "container mx-auto p-4" */}
+              {children}
+            </main>
+          </div>
         </div>
       </SidebarProvider>
     );
