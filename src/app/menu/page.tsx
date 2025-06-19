@@ -1,8 +1,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered, Palette } from "lucide-react"; 
+import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered, Palette, ExternalLink } from "lucide-react"; 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 
 interface MenuItem {
   title: string;
@@ -66,6 +67,11 @@ export default function MenuPage() {
         <p className="text-muted-foreground text-lg">
           Welcome! Select an option below to get started.
         </p>
+        <Button asChild variant="link" className="p-0 h-auto mt-2 text-accent hover:underline">
+          <Link href="https://www.esystemlk.xyz" target="_blank" rel="noopener noreferrer">
+            Visit Our Main Website <ExternalLink className="ml-1.5 h-4 w-4" />
+          </Link>
+        </Button>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
