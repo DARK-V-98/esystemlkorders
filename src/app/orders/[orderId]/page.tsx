@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { 
     ArrowLeft, Briefcase, CheckSquare, Clock, DollarSign, FileText, FileType, Globe, Info, ListChecks, 
-    Mail, PaletteIcon, Server, Settings2, ShieldQuestion, Star, User, Users, Building, Package, Edit3
-} from "lucide-react"; // Added Package, Edit3
+    Mail, PaletteIcon, Server, Settings2, ShieldQuestion, Star, User, Users, Building, Package, Edit3, HelpCircle
+} from "lucide-react"; 
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import type { SelectedFeatureInOrder, ProjectDetailsForm, PackageOrderDetailsForm, Order } from "@/types";
@@ -415,6 +415,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     <CardHeader className="px-0"><SectionTitle icon={Globe} title="Website Setup" /></CardHeader>
                     <CardContent className="px-0 pb-0"><dl className="divide-y divide-border">
                       <DetailRow label="Desired Website Name" value={pkgDetails.websiteName} />
+                      <DetailRow label="Needs Setup Assistance?" value={pkgDetails.needsWebsiteSetupAssistance} />
                       <DetailRow label="Has Domain?" value={pkgDetails.hasDomain} />
                       {pkgDetails.hasDomain === 'Yes' && <DetailRow label="Domain Name" value={pkgDetails.domainName} isLink={pkgDetails.domainName && !pkgDetails.domainName.startsWith('http') ? `http://${pkgDetails.domainName}`: pkgDetails.domainName} />}
                       <DetailRow label="Has Hosting?" value={pkgDetails.hasHosting} />
@@ -498,3 +499,4 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     </div>
   );
 }
+

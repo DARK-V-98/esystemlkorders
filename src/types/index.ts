@@ -115,6 +115,7 @@ export interface PackageOrderDetailsForm {
 
   // Website Setup
   websiteName: string;
+  needsWebsiteSetupAssistance: 'Yes' | 'No';
   hasDomain: 'Yes' | 'No';
   domainName?: string;
   hasHosting: 'Yes' | 'No';
@@ -174,7 +175,7 @@ export interface Order {
   domain?: string;
   hostingDetails?: string;
   projectDetails?: ProjectDetailsForm; 
-  packageOrderDetails?: PackageOrderDetailsForm; // New field for package order details
+  packageOrderDetails?: PackageOrderDetailsForm; 
 }
 
 export interface OrderFilters {
@@ -231,3 +232,4 @@ export interface FeatureCategory {
 }
 
 export type Currency = 'usd' | 'lkr';
+

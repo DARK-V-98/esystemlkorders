@@ -14,13 +14,27 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { Order, PackageOrderDetailsForm } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 const designStyleOptions = ['Modern', 'Minimal', 'Classic', 'Playful', 'Elegant', 'Techy', 'Bohemian', 'Artistic', 'Other'] as const;
+
+const addonPriceRanges = [
+  { name: 'Online Ordering', range: 'LKR 20,000 – 40,000' },
+  { name: 'Online Payments', range: 'LKR 15,000 – 30,000' },
+  { name: 'Contact Form', range: 'LKR 5,000 – 10,000' },
+  { name: 'Admin Panel', range: 'LKR 25,000 – 50,000' },
+  { name: 'Customer Dashboard', range: 'LKR 20,000 – 40,000' },
+  { name: 'Parcel Tracking', range: 'LKR 25,000 – 45,000' },
+  { name: 'Booking System', range: 'LKR 30,000 – 60,000' },
+  { name: 'Blog Section', range: 'LKR 10,000 – 20,000' },
+  { name: 'File Downloads', range: 'LKR 5,000 – 10,000' },
+  { name: 'Chat Support', range: 'LKR 5,000 – 15,000' },
+];
 
 const packageDetailsSchema = z.object({
   // Basic Info
@@ -32,6 +46,7 @@ const packageDetailsSchema = z.object({
 
   // Website Setup
   websiteName: z.string().min(1, 'Desired website name is required'),
+  needsWebsiteSetupAssistance: z.enum(['Yes', 'No'], { required_error: "Please select if you need website setup assistance." }),
   hasDomain: z.enum(['Yes', 'No'], { required_error: "Please select if you have a domain." }),
   domainName: z.string().optional(),
   hasHosting: z.enum(['Yes', 'No'], { required_error: "Please select if you have hosting." }),
@@ -96,6 +111,7 @@ export default function FillPackageDetailsPage() {
   const { control, handleSubmit, register, watch, setValue, formState: { errors } } = useForm<PackageOrderDetailsForm>({
     resolver: zodResolver(packageDetailsSchema),
     defaultValues: {
+      needsWebsiteSetupAssistance: undefined,
       hasDomain: undefined,
       hasHosting: undefined,
       needsBusinessEmail: undefined,
@@ -204,6 +220,25 @@ export default function FillPackageDetailsPage() {
         <p className="text-muted-foreground">Please fill out the form with your details for the selected package.</p>
       </header>
 
+      <Alert variant="destructive" className="mb-8">
+        <AlertTriangle className="h-5 w-5" />
+        <AlertTitle>Important Notice: Additional Costs for Add-on Features</AlertTitle>
+        <AlertDescription>
+          <p className="mb-2">
+            Please note that selecting any of the features listed below may incur additional costs on top of your base package price.
+            These prices are estimates and will be finalized after discussion.
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-sm">
+            {addonPriceRanges.map(addon => (
+              <li key={addon.name}><strong>{addon.name}:</strong> {addon.range}</li>
+            ))}
+          </ul>
+          <p className="mt-2">
+            If you select any of these features, we will contact you to discuss the exact pricing and requirements.
+          </p>
+        </AlertDescription>
+      </Alert>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
         <Card>
           <CardHeader><CardTitle>👤 Basic Info</CardTitle></CardHeader>
@@ -220,6 +255,18 @@ export default function FillPackageDetailsPage() {
           <CardHeader><CardTitle>🌐 Website Setup</CardTitle></CardHeader>
           <CardContent className="space-y-6">
             <div><Label htmlFor="websiteName">Desired Website Name / Title</Label><Input id="websiteName" {...register("websiteName")} disabled={isSubmitting} /><p className="text-destructive text-xs mt-1">{errors.websiteName?.message}</p></div>
+            
+            <Controller name="needsWebsiteSetupAssistance" control={control} render={({ field }) => (
+              <div>
+                <Label className="mb-1 block">Do you need assistance with website setup (domain, hosting, email configuration)?</Label>
+                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting}>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="setupAssistYes" /><Label htmlFor="setupAssistYes">Yes</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="setupAssistNo" /><Label htmlFor="setupAssistNo">No</Label></div>
+                </RadioGroup>
+                <p className="text-destructive text-xs mt-1">{errors.needsWebsiteSetupAssistance?.message}</p>
+              </div>
+            )} />
+
             <Controller name="hasDomain" control={control} render={({ field }) => (
               <div><Label className="mb-1 block">Do you have a domain?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="domainYes" /><Label htmlFor="domainYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="domainNo" /><Label htmlFor="domainNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasDomain?.message}</p></div>
             )} />
