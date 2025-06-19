@@ -27,8 +27,9 @@ import {
   Search,
   ListFilter,
 } from "lucide-react";
-import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SortableOrderKey } from "@/types";
+import type { Order, OrderStatus, ProjectType, OrderFilters, SortConfig, SortableOrderKey, PaymentStatus } from "@/types";
 import { OrderStatusBadge } from "./order-status-badge";
+import { PaymentStatusBadge } from "./payment-status-badge"; // Import PaymentStatusBadge
 import { formatDate, ORDER_STATUSES, PROJECT_TYPES } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -53,8 +54,6 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    // This effect simulates fetching data when filters or sortConfig change.
-    // In a real app, this would be an API call.
     const applyFiltersAndSort = () => {
       let processedOrders = [...initialOrders];
 
@@ -70,7 +69,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
         processedOrders = processedOrders.filter(order =>
           order.clientName.toLowerCase().includes(term) ||
           order.projectName.toLowerCase().includes(term) ||
-          order.formattedOrderId.toLowerCase().includes(term) // Search by formattedOrderId
+          order.formattedOrderId.toLowerCase().includes(term)
         );
       }
 
@@ -82,7 +81,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
           let comparison = 0;
           if (valA === undefined || valA === null) comparison = -1;
           else if (valB === undefined || valB === null) comparison = 1;
-          else if (typeof valA === 'string' && typeof valB === 'string') { // Add string comparison for IDs
+          else if (typeof valA === 'string' && typeof valB === 'string') {
             comparison = valA.localeCompare(valB);
           } else if (typeof valA === 'number' && typeof valB === 'number') {
             comparison = valA - valB;
@@ -112,7 +111,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
   const handleFilterChange = (filterName: keyof OrderFilters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
-  
+
   const clearFilters = () => {
     setFilters({ status: "", projectType: "", searchTerm: "" });
     toast({ title: "Filters Cleared", description: "All filters have been reset." });
@@ -168,7 +167,6 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
                         <SelectValue placeholder="All Statuses" />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* <SelectItem value="">All Statuses</SelectItem> <- REMOVED */}
                         {ORDER_STATUSES.map(status => (
                           <SelectItem key={status} value={status}>{status}</SelectItem>
                         ))}
@@ -185,7 +183,6 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
                         <SelectValue placeholder="All Types" />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* <SelectItem value="">All Types</SelectItem> <- REMOVED */}
                         {PROJECT_TYPES.map(type => (
                           <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
@@ -226,7 +223,12 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
                 </TableHead>
                 <TableHead>
                   <Button variant="ghost" onClick={() => handleSort("status")} className="px-0">
-                    Status {renderSortIcon("status")}
+                    Order Status {renderSortIcon("status")}
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button variant="ghost" onClick={() => handleSort("paymentStatus")} className="px-0">
+                    Payment Status {renderSortIcon("paymentStatus")}
                   </Button>
                 </TableHead>
                 <TableHead>
@@ -248,10 +250,12 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
                     <TableCell>
                       <OrderStatusBadge status={order.status} />
                     </TableCell>
+                    <TableCell>
+                      <PaymentStatusBadge status={order.paymentStatus} />
+                    </TableCell>
                     <TableCell>{formatDate(order.deadline, 'PP')}</TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="outline" size="sm">
-                        {/* Link still uses the Firestore document ID for navigation */}
                         <Link href={`/orders/${order.id}`}>
                           View <ExternalLink className="ml-2 h-3 w-3" />
                         </Link>
@@ -261,7 +265,7 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">
+                  <TableCell colSpan={8} className="text-center h-24">
                     No orders found.
                   </TableCell>
                 </TableRow>
@@ -273,4 +277,3 @@ export function OrderListTable({ initialOrders }: OrderListTableProps) {
     </Card>
   );
 }
-

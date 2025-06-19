@@ -12,11 +12,11 @@ export type OrderStatus =
 
 export type ProjectType = 'New Website' | 'Redesign' | 'Feature Enhancement' | 'Maintenance' | 'Custom Build' | 'Budget Package';
 
-export type PaymentStatus = 
-  | 'Not Paid' 
-  | 'Advanced Paid' 
-  | 'Half Paid' 
-  | 'Full Paid' 
+export type PaymentStatus =
+  | 'Not Paid'
+  | 'Advanced Paid'
+  | 'Half Paid'
+  | 'Full Paid'
   | 'Verification Pending';
 
 export interface CustomerDetailsForm {
@@ -49,7 +49,7 @@ export interface ProjectDetailsForm {
   companyAddress?: string;
   companyContactNumber?: string;
   companyEmail?: string;
-  companyLogoUrl?: string; 
+  companyLogoUrl?: string;
 
   // Website Details
   desiredWebsiteName: string;
@@ -93,14 +93,14 @@ export interface ProjectDetailsForm {
   hasPageContent: 'Yes' | 'No';
   wantsContentWriting: 'Yes' | 'No';
   hasImagesReady: 'Yes' | 'No';
-  imageSourceUrl?: string; 
+  imageSourceUrl?: string;
 
   // Legal & Docs
   hasLegalDocs: 'Yes' | 'No';
-  legalDocsSourceUrl?: string; 
+  legalDocsSourceUrl?: string;
 
   // Timeline & Budget
-  preferredLaunchDate?: string; 
+  preferredLaunchDate?: string;
   projectBudget: string;
 
   // Extra Notes
@@ -110,7 +110,7 @@ export interface ProjectDetailsForm {
   // Final Consent
   confirmDetailsAccurate: boolean;
   agreeToShareContent: boolean;
-  lastUpdated?: string; // Added for serializable timestamp
+  lastUpdated?: string;
 }
 
 export interface PackageOrderDetailsForm {
@@ -147,7 +147,7 @@ export interface PackageOrderDetailsForm {
   businessGoalsSpecialNeeds?: string;
   confirmDetailsCorrect: boolean;
   agreeToShareMaterials: boolean;
-  lastUpdated?: string; // Added for serializable timestamp
+  lastUpdated?: string;
 }
 
 
@@ -160,19 +160,19 @@ export interface Order {
   status: OrderStatus;
   description: string;
   requestedFeatures: SelectedFeatureInOrder[];
-  deadline?: string; 
-  createdDate: string; 
+  deadline?: string;
+  createdDate: string;
   contactEmail: string;
-  budget: number; 
+  budget: number;
   numberOfPages: number;
-  selectedCurrency: Currency; 
-  currencySymbol: string; 
+  selectedCurrency: Currency;
+  currencySymbol: string;
   userEmail: string;
   domain?: string;
   hostingDetails?: string;
-  projectDetails?: ProjectDetailsForm; 
-  packageOrderDetails?: PackageOrderDetailsForm; 
-  paymentStatus?: PaymentStatus; 
+  projectDetails?: ProjectDetailsForm;
+  packageOrderDetails?: PackageOrderDetailsForm;
+  paymentStatus: PaymentStatus; // Changed from optional to required
 }
 
 export interface OrderFilters {
@@ -187,16 +187,16 @@ export type SortableOrderKey =
   | 'projectName'
   | 'projectType'
   | 'status'
-  | 'deadline' 
-  | 'createdDate' 
+  | 'paymentStatus' // Added paymentStatus
+  | 'deadline'
+  | 'createdDate'
   | 'contactEmail'
   | 'budget'
   | 'numberOfPages'
-  | 'userEmail'
-  | 'paymentStatus'; 
+  | 'userEmail';
 
 export interface SortConfig {
-  key: SortableOrderKey | null; 
+  key: SortableOrderKey | null;
   direction: 'ascending' | 'descending';
 }
 
@@ -230,4 +230,3 @@ export interface FeatureCategory {
 }
 
 export type Currency = 'usd' | 'lkr';
-

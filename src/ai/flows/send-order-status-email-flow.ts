@@ -10,7 +10,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit/zod';
+import { z } from 'genkit'; // Changed from 'genkit/zod'
 import type { OrderStatus } from '@/types';
 // import sgMail from '@sendgrid/mail'; // Removed SendGrid
 
