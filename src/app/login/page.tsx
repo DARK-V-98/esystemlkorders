@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import Image from 'next/image'; // Import next/image
+import Link from 'next/link'; // Import Link
 
 // Simple SVG for Google icon
 const GoogleIcon = () => (
@@ -27,10 +29,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false); // State to toggle between Sign In and Sign Up
+  const [isSignUp, setIsSignUp] = useState(false);
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -92,22 +99,18 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background to-muted/50 p-4">
       <Card className="w-full max-w-md shadow-2xl rounded-xl overflow-hidden">
-        <CardHeader className="bg-primary/10 p-8">
+        <CardHeader className="bg-primary/10 p-8 text-center">
           <div className="flex justify-center mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-16 w-16 text-primary"
-            >
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-            </svg>
+            <Image 
+              src="/logo.png" 
+              alt="eSystemLK Logo" 
+              width={80} 
+              height={80}
+              priority 
+              data-ai-hint="company logo"
+            />
           </div>
-          <CardTitle className="text-3xl font-bold text-center text-primary">
+          <CardTitle className="text-3xl font-bold text-primary">
             {isSignUp ? "Create Account" : "eSystemLK Gateway"}
           </CardTitle>
           <CardDescription className="text-center text-foreground/80 pt-1">
@@ -142,13 +145,6 @@ export default function LoginPage() {
                 disabled={isSubmitting}
               />
             </div>
-            {/* Add confirm password if desired for sign up */}
-            {/* {isSignUp && (
-              <div>
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input id="confirm-password" type="password" placeholder="••••••••" required />
-              </div>
-            )} */}
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isSignUp ? "Sign Up" : "Sign In"}
@@ -171,15 +167,20 @@ export default function LoginPage() {
             <span className="ml-2">Sign in with Google</span>
           </Button>
         </CardContent>
-        <CardFooter className="p-6 bg-muted/30 flex flex-col items-center space-y-3">
+        <CardFooter className="p-6 bg-muted/30 flex flex-col items-center space-y-2">
            <Button variant="link" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-accent hover:text-accent/80 p-0 h-auto" disabled={isSubmitting}>
             {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
           </Button>
            <p className="text-xs text-muted-foreground text-center w-full pt-2">
-            Contact support if you have trouble.
-          </p>
+            &copy; {currentYear} eSystemLK. All rights reserved.
+           </p>
+           <p className="text-xs text-muted-foreground text-center w-full">
+            Powered by <Link href="https://www.esystemlk.xyz" target="_blank" rel="noopener noreferrer" className="hover:underline text-accent">www.esystemlk.xyz</Link>
+           </p>
         </CardFooter>
       </Card>
     </div>
   );
 }
+
+    

@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/auth-context";
 import type { AuthUser } from "@/types"; 
 import { CurrencySwitcher } from "./currency-switcher";
 import { Separator } from "./ui/separator";
+import Image from 'next/image'; // Import next/image
 
 interface NavItem {
   href: string;
@@ -55,13 +56,13 @@ const allNavItems: NavItem[] = [
     href: "/vip", 
     label: "VIP Access", 
     icon: Gem,
-    allowedRoles: ['developer', 'admin'] // Example: VIP for dev/admin
+    allowedRoles: ['developer', 'admin'] 
   },
   { 
     href: "/admin", 
     label: "Admin Console", 
     icon: ShieldCheck,
-    allowedRoles: ['admin', 'developer'] // Only admin and developer
+    allowedRoles: ['admin', 'developer'] 
   },
 ];
 
@@ -70,8 +71,8 @@ export function SidebarNavigation() {
   const { user, signOutUser, loading } = useAuth();
 
   const visibleNavItems = allNavItems.filter(item => {
-    if (!item.allowedRoles) return true; // Item is public or role check not needed
-    if (!user || !user.role) return false; // User not logged in or no role, hide restricted item
+    if (!item.allowedRoles) return true; 
+    if (!user || !user.role) return false; 
     return item.allowedRoles.includes(user.role);
   });
 
@@ -79,18 +80,14 @@ export function SidebarNavigation() {
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left">
       <SidebarHeader className="p-4 flex items-center gap-2">
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-8 w-8 text-primary"
-          >
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-          </svg>
+        <Image 
+          src="/logo.png" 
+          alt="eSystemLK Logo" 
+          width={32} 
+          height={32} 
+          className="h-8 w-8"
+          data-ai-hint="company logo"
+        />
         <h1 className="text-xl font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
           eSystemLK
         </h1>
@@ -98,7 +95,7 @@ export function SidebarNavigation() {
       <SidebarContent className="p-2">
         <SidebarMenu>
           {visibleNavItems.map((item) => {
-            const isActive = item.matchExact ? pathname === item.href : pathname.startsWith(item.href) && (item.href !== "/" || pathname === "/"); // Handle exact match for root
+            const isActive = item.matchExact ? pathname === item.href : pathname.startsWith(item.href) && (item.href !== "/" || pathname === "/"); 
             
             return (
               <SidebarMenuItem key={item.label}>
@@ -185,3 +182,5 @@ export function SidebarNavigation() {
     </Sidebar>
   );
 }
+
+    

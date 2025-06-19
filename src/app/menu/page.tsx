@@ -1,17 +1,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered, Palette } from "lucide-react"; // Added Palette
+import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered, Palette } from "lucide-react"; 
 import Link from "next/link";
 import type { ReactNode } from "react";
-// import { useAuth } from "@/contexts/auth-context"; // To be used later
-// import type { AuthUser } from "@/types"; // To be used later
 
 interface MenuItem {
   title: string;
   description: string;
   icon: React.ElementType;
   href: string;
-  // allowedRoles?: Array<AuthUser['role']>;
 }
 
 const menuItems: MenuItem[] = [
@@ -30,7 +27,7 @@ const menuItems: MenuItem[] = [
   {
     title: "Make Custom Website",
     description: "Design and order a unique website.",
-    icon: Palette, // Changed icon to Palette
+    icon: Palette, 
     href: "/custom-website", 
   },
   {
@@ -54,12 +51,6 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function MenuPage() {
-  // const { user } = useAuth(); 
-
-  // const visibleMenuItems = menuItems.filter(item => {
-  //   if (!item.allowedRoles || !user?.role) return true; 
-  //   return item.allowedRoles.includes(user.role);
-  // });
   const visibleMenuItems = menuItems;
 
 
@@ -69,7 +60,7 @@ export default function MenuPage() {
         <div className="flex items-center space-x-3 mb-2">
           <LayoutDashboard className="h-10 w-10 text-primary" />
           <h1 className="text-4xl font-bold font-headline text-primary">
-            Gateway Dashboard
+            eSystemLK Orders
           </h1>
         </div>
         <p className="text-muted-foreground text-lg">
@@ -124,3 +115,5 @@ function MenuItemCard({ title, description, icon: Icon, href }: MenuItemCardProp
     </Link>
   );
 }
+
+    

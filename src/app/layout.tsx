@@ -5,13 +5,13 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
-import { CurrencyProvider } from '@/contexts/currency-context'; // Import CurrencyProvider
+import { CurrencyProvider } from '@/contexts/currency-context'; 
 import { ProtectedLayoutContent } from '@/components/protected-layout';
 import type { ReactNode } from 'react';
 
 
 export const metadata: Metadata = {
-  title: 'eSystemLK Gateway Dashboard',
+  title: 'eSystemLK Orders',
   description: 'Manage website development orders for eSystemLK Gateway.',
 };
 
@@ -29,7 +29,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          <CurrencyProvider> {/* Wrap with CurrencyProvider */}
+          <CurrencyProvider> 
             <ProtectedLayoutContent>
               {children}
             </ProtectedLayoutContent>
@@ -40,3 +40,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
