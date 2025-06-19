@@ -1,9 +1,10 @@
+
 "use client"
 
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeft } from "lucide-react"
+import { PanelLeft, Menu } from "lucide-react" // Added Menu icon
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -263,7 +264,7 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, isMobile } = useSidebar()
 
   return (
     <Button
@@ -271,14 +272,20 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-7 w-7", className)}
+      className={cn(
+        isMobile ? "h-9 w-9" : "h-7 w-7", // Increased size for mobile
+        "md:hidden", // Hide on md and up by default if sidebar is present
+        "group-data-[variant=inset]/sidebar-wrapper:md:flex", // Show for inset variant on desktop
+        "group-data-[variant=floating]/sidebar-wrapper:md:flex", // Show for floating variant on desktop
+        className
+      )}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
       }}
       {...props}
     >
-      <PanelLeft />
+      {isMobile ? <Menu /> : <PanelLeft />}
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
@@ -761,3 +768,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
