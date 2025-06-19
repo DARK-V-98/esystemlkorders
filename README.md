@@ -10,11 +10,11 @@ This project uses environment variables for Firebase configuration. You will nee
 
 Example `.env.local`:
 ```
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=1234567890
-NEXT_PUBLIC_FIREBASE_APP_ID=1:1234567890:web:abcdef1234567890
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyA4N7py6wI38KUyKD1RzzuZenIA1VAwV9M
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=esystemlk-web.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=esystemlk-web
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=esystemlk-web.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=87807547925
+NEXT_PUBLIC_FIREBASE_APP_ID=1:87807547925:web:299ba3a46823791ade0c1c
 ```
 **Important**: Keep your API keys and sensitive information secure and do not commit them to your repository if the repository is public.
