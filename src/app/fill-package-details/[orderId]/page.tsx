@@ -47,7 +47,7 @@ interface AddonConfig {
   price: Price; // {lkr, usd}
 }
 
-const ADDON_FEATURES_CONFIG: AddonConfig[] = [
+export const ADDON_FEATURES_CONFIG: AddonConfig[] = [
   { id: 'featureOnlineOrdering', name: 'Online Ordering', price: { lkr: 20000, usd: 67 } },
   { id: 'featureOnlinePayments', name: 'Online Payments', price: { lkr: 15000, usd: 50 } },
   { id: 'featureContactForm', name: 'Contact Form', price: { lkr: 5000, usd: 17 } },
@@ -142,14 +142,24 @@ export default function FillPackageDetailsPage() {
   const { control, handleSubmit, register, watch, setValue, formState: { errors } } = useForm<PackageOrderDetailsForm>({
     resolver: zodResolver(packageDetailsSchema),
     defaultValues: {
-      needsWebsiteSetupAssistance: "", // Changed from undefined
-      hasDomain: "", // Changed from undefined
-      hasHosting: "", // Changed from undefined
-      needsBusinessEmail: "", // Changed from undefined
-      style: undefined, // Select can handle undefined for placeholder
+      fullName: '',
+      nicNumber: '',
+      email: '',
+      phone: '',
+      address: '',
+      websiteName: '',
+      needsWebsiteSetupAssistance: "", 
+      hasDomain: "", 
+      domainName: '',
+      hasHosting: "", 
+      hostingProvider: '',
+      needsBusinessEmail: "", 
       businessEmailCount: 0,
-      confirmDetailsCorrect: false,
-      agreeToShareMaterials: false,
+      baseColors: '',
+      style: undefined, 
+      styleOther: '',
+      inspirationSites: '',
+      fontAndLogoIdeas: '',
       featureOnlineOrdering: false,
       featureOnlinePayments: false,
       featureContactForm: false,
@@ -160,17 +170,21 @@ export default function FillPackageDetailsPage() {
       featureBlog: false,
       featureFileDownloads: false,
       featureChatSupport: false,
+      otherFeatures: '',
       budgetRange: "", 
+      businessGoalsSpecialNeeds: '',
+      confirmDetailsCorrect: false,
+      agreeToShareMaterials: false,
     },
   });
 
   const watchedFeatures = watch(ADDON_FEATURES_CONFIG.map(f => f.id)); 
 
   useEffect(() => {
-    if (!orderData) return;
+    if (!orderData || isLoading) return; // Ensure orderData is loaded and not currently loading
 
     const baseLKR = orderData.budget; 
-    const baseUSD = Math.round(baseLKR / 300); 
+    const baseUSD = Math.round(baseLKR / 300); // Simple conversion, adjust if needed
     setBasePackagePrice({ lkr: baseLKR, usd: baseUSD });
 
     let currentAddonsTotalLKR = 0;
@@ -191,7 +205,7 @@ export default function FillPackageDetailsPage() {
     
     setValue('budgetRange', `${currencySymbol}${ (selectedCurrency === 'lkr' ? finalLKR : finalUSD).toLocaleString() } ${selectedCurrency.toUpperCase()}`);
 
-  }, [watchedFeatures, orderData, selectedCurrency, currencySymbol, watch, setValue]);
+  }, [watchedFeatures, orderData, selectedCurrency, currencySymbol, watch, setValue, isLoading]);
 
 
   const watchHasDomain = watch("hasDomain");
@@ -199,7 +213,7 @@ export default function FillPackageDetailsPage() {
   const watchNeedsBusinessEmail = watch("needsBusinessEmail");
   const watchStyle = watch("style");
 
-  useEffect(() => {
+ useEffect(() => {
     if (!orderId) return;
     const fetchOrder = async () => {
       setIsLoading(true);
@@ -213,29 +227,62 @@ export default function FillPackageDetailsPage() {
              router.push(`/orders/${orderId}`);
              return;
           }
-          setOrderData(fetchedOrder);
+          setOrderData(fetchedOrder); // Set orderData first
           
+          // Initialize base price and final calculated price
           const baseLKR = fetchedOrder.budget;
           const baseUSD = Math.round(baseLKR / 300); 
           setBasePackagePrice({ lkr: baseLKR, usd: baseUSD });
-          setFinalCalculatedPrice({ lkr: baseLKR, usd: baseUSD }); 
-          setValue('budgetRange', `${fetchedOrder.currencySymbol}${fetchedOrder.budget.toLocaleString()} ${fetchedOrder.selectedCurrency.toUpperCase()}`);
-
-
+          
           if (fetchedOrder.packageOrderDetails) {
-            const detailsToSet = JSON.parse(JSON.stringify(fetchedOrder.packageOrderDetails));
-            Object.entries(detailsToSet).forEach(([key, value]) => {
-               setValue(key as keyof PackageOrderDetailsForm, value as any);
+            const details = fetchedOrder.packageOrderDetails;
+            setValue('fullName', details.fullName || fetchedOrder.clientName || '');
+            setValue('nicNumber', details.nicNumber || '');
+            setValue('email', details.email || fetchedOrder.contactEmail || '');
+            setValue('phone', details.phone || '');
+            setValue('address', details.address || '');
+            setValue('websiteName', details.websiteName || '');
+            setValue('needsWebsiteSetupAssistance', details.needsWebsiteSetupAssistance || "");
+            setValue('hasDomain', details.hasDomain || "");
+            setValue('domainName', details.domainName || '');
+            setValue('hasHosting', details.hasHosting || "");
+            setValue('hostingProvider', details.hostingProvider || '');
+            setValue('needsBusinessEmail', details.needsBusinessEmail || "");
+            setValue('businessEmailCount', Number(details.businessEmailCount) || 0);
+            setValue('baseColors', details.baseColors || '');
+            setValue('style', details.style || undefined);
+            setValue('styleOther', details.styleOther || '');
+            setValue('inspirationSites', details.inspirationSites || '');
+            setValue('fontAndLogoIdeas', details.fontAndLogoIdeas || '');
+
+            ADDON_FEATURES_CONFIG.forEach(addon => {
+              setValue(addon.id, Boolean(details[addon.id]));
             });
-             if(detailsToSet.finalCalculatedPrice) {
-                setFinalCalculatedPrice(detailsToSet.finalCalculatedPrice);
-             }
-             if(detailsToSet.addonsTotalPrice) {
-                setAddonsTotalPrice(detailsToSet.addonsTotalPrice);
-             }
+            setValue('otherFeatures', details.otherFeatures || '');
+            
+            setValue('businessGoalsSpecialNeeds', details.businessGoalsSpecialNeeds || '');
+            setValue('confirmDetailsCorrect', Boolean(details.confirmDetailsCorrect));
+            setValue('agreeToShareMaterials', Boolean(details.agreeToShareMaterials));
+
+            // Set prices from saved details if available
+            if(details.finalCalculatedPrice) setFinalCalculatedPrice(details.finalCalculatedPrice);
+            else setFinalCalculatedPrice({lkr: baseLKR, usd: baseUSD}); // Fallback if not saved
+
+            if(details.addonsTotalPrice) setAddonsTotalPrice(details.addonsTotalPrice);
+            else setAddonsTotalPrice({lkr:0, usd:0}); // Fallback
+
+            // budgetRange will be updated by the useEffect for price calculation
           } else {
              setValue('email', fetchedOrder.contactEmail || '');
              setValue('fullName', fetchedOrder.clientName || '');
+             setValue('needsWebsiteSetupAssistance', "");
+             setValue('hasDomain', "");
+             setValue('hasHosting', "");
+             setValue('needsBusinessEmail', "");
+             setValue('businessEmailCount', 0);
+             setValue('style', undefined);
+             setFinalCalculatedPrice({ lkr: baseLKR, usd: baseUSD }); // Initial price is base price
+             setAddonsTotalPrice({lkr:0, usd:0});
           }
         } else {
           toast({ variant: 'destructive', title: 'Error', description: 'Order not found.' });
@@ -245,11 +292,12 @@ export default function FillPackageDetailsPage() {
         console.error("Error fetching order:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to load order details.' });
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Set loading to false after all operations
       }
     };
     fetchOrder();
   }, [orderId, router, toast, setValue]);
+
 
   const onSubmit: SubmitHandler<PackageOrderDetailsForm> = async (data) => {
     setIsSubmitting(true);
@@ -259,8 +307,8 @@ export default function FillPackageDetailsPage() {
       .map(addon => ({
         id: addon.id,
         name: addon.name,
-        priceAtSubmission: addon.price,
-        selectedCurrency: selectedCurrency, 
+        priceAtSubmission: addon.price, // Store the full Price object {lkr, usd}
+        selectedCurrency: selectedCurrency, // The currency active during submission
       }));
 
     try {
@@ -268,8 +316,8 @@ export default function FillPackageDetailsPage() {
       const dataToSave: Partial<PackageOrderDetailsForm> & { lastUpdated?: any, selectedAddons?: SelectedPackageAddon[], addonsTotalPrice?: Price, finalCalculatedPrice?: Price } = {
         ...data,
         selectedAddons: selectedAddonsData,
-        addonsTotalPrice: addonsTotalPrice,
-        finalCalculatedPrice: finalCalculatedPrice,
+        addonsTotalPrice: addonsTotalPrice, // Save the Price object {lkr, usd}
+        finalCalculatedPrice: finalCalculatedPrice, // Save the Price object {lkr, usd}
         budgetRange: `${currencySymbol}${finalCalculatedPrice[selectedCurrency].toLocaleString()} ${selectedCurrency.toUpperCase()}`, 
         lastUpdated: serverTimestamp(),
       };
@@ -308,12 +356,11 @@ export default function FillPackageDetailsPage() {
 
       <Alert variant="destructive" className="mb-8">
         <AlertTriangle className="h-5 w-5" />
-        <AlertTitle>Important Notice: Additional Costs for Add-on Features</AlertTitle>
+        <AlertTitle>Important Notice: Add-on Feature Pricing</AlertTitle>
         <AlertDescription>
           <p className="mb-2">
-            The prices listed for add-on features below are fixed for calculation on this form.
-            The ranges below are for general information about typical costs.
-            Selecting add-ons will update the "Estimated Final Total".
+            Selecting add-on features below will update the "Estimated Final Total" based on their listed prices.
+            The price ranges provided here are for general information about typical market costs.
           </p>
           <ul className="list-disc pl-5 space-y-1 text-sm">
             {informationalAddonPriceRanges.map(addon => (
@@ -343,7 +390,7 @@ export default function FillPackageDetailsPage() {
             <Controller name="needsWebsiteSetupAssistance" control={control} render={({ field }) => (
               <div>
                 <Label className="mb-1 block">Do you need assistance with website setup (domain, hosting, email configuration)?</Label>
-                <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}>
+                <RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="setupAssistYes" /><Label htmlFor="setupAssistYes">Yes</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="No" id="setupAssistNo" /><Label htmlFor="setupAssistNo">No</Label></div>
                 </RadioGroup>
@@ -352,17 +399,17 @@ export default function FillPackageDetailsPage() {
             )} />
 
             <Controller name="hasDomain" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you have a domain?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="domainYes" /><Label htmlFor="domainYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="domainNo" /><Label htmlFor="domainNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasDomain?.message}</p></div>
+              <div><Label className="mb-1 block">Do you have a domain?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="domainYes" /><Label htmlFor="domainYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="domainNo" /><Label htmlFor="domainNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasDomain?.message}</p></div>
             )} />
             {watchHasDomain === 'Yes' && <div><Label htmlFor="domainName">If yes, Domain Name</Label><Input id="domainName" {...register("domainName")} disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.domainName?.message}</p></div>}
             
             <Controller name="hasHosting" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you have hosting?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="hostingYes" /><Label htmlFor="hostingYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="hostingNo" /><Label htmlFor="hostingNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasHosting?.message}</p></div>
+              <div><Label className="mb-1 block">Do you have hosting?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="hostingYes" /><Label htmlFor="hostingYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="hostingNo" /><Label htmlFor="hostingNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.hasHosting?.message}</p></div>
             )} />
             {watchHasHosting === 'Yes' && <div><Label htmlFor="hostingProvider">If yes, Hosting Provider Name</Label><Input id="hostingProvider" {...register("hostingProvider")} disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.hostingProvider?.message}</p></div>}
 
             <Controller name="needsBusinessEmail" control={control} render={({ field }) => (
-              <div><Label className="mb-1 block">Do you need business email accounts?</Label><RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="bEmailYes" /><Label htmlFor="bEmailYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="bEmailNo" /><Label htmlFor="bEmailNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.needsBusinessEmail?.message}</p></div>
+              <div><Label className="mb-1 block">Do you need business email accounts?</Label><RadioGroup onValueChange={field.onChange} value={field.value || ""} className="flex gap-4" disabled={isSubmitting || isLoading}><div className="flex items-center space-x-2"><RadioGroupItem value="Yes" id="bEmailYes" /><Label htmlFor="bEmailYes">Yes</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="No" id="bEmailNo" /><Label htmlFor="bEmailNo">No</Label></div></RadioGroup><p className="text-destructive text-xs mt-1">{errors.needsBusinessEmail?.message}</p></div>
             )} />
             {watchNeedsBusinessEmail === 'Yes' && <div><Label htmlFor="businessEmailCount">If yes, how many?</Label><Input id="businessEmailCount" type="number" {...register("businessEmailCount", { valueAsNumber: true, setValueAs: (v) => parseInt(v, 10) || 0 })} min="1" disabled={isSubmitting || isLoading} /><p className="text-destructive text-xs mt-1">{errors.businessEmailCount?.message}</p></div>}
           </CardContent>
@@ -410,7 +457,7 @@ export default function FillPackageDetailsPage() {
               ))}
             </div>
              <p className="text-destructive text-xs mt-1">
-                {Object.values(errors).find(err => ADDON_FEATURES_CONFIG.some(cfg => `feature${cfg.name.replace(/\s+/g, '')}` === err?.ref?.name))?.message as string}
+                {Object.values(errors).find(err => ADDON_FEATURES_CONFIG.some(cfg => cfg.id === err?.ref?.name))?.message as string}
             </p>
             <div><Label htmlFor="otherFeatures">Other feature requirements</Label><Textarea id="otherFeatures" {...register("otherFeatures")} disabled={isSubmitting || isLoading} /></div>
           </CardContent>
@@ -425,8 +472,8 @@ export default function FillPackageDetailsPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
              <div className="flex justify-between">
-                <span>Base Package Price ({orderData.selectedCurrency.toUpperCase()}):</span>
-                <span className="font-semibold">{orderData.currencySymbol}{basePackagePrice[orderData.selectedCurrency].toLocaleString()}</span>
+                <span>Base Package Price ({orderData?.selectedCurrency.toUpperCase()}):</span>
+                <span className="font-semibold">{orderData?.currencySymbol}{basePackagePrice[orderData?.selectedCurrency || 'lkr'].toLocaleString()}</span>
              </div>
              <div className="flex justify-between">
                 <span>Selected Add-ons Total ({selectedCurrency.toUpperCase()}):</span>
@@ -459,7 +506,7 @@ export default function FillPackageDetailsPage() {
             </div>
             <div className="flex items-start space-x-2">
               <Controller name="agreeToShareMaterials" control={control} render={({ field }) => <Checkbox id="agreeToShareMaterials" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting || isLoading}/>} />
-              <div><Label htmlFor="agreeToShareMaterials" className="font-normal">I agree to share necessary content, files, and provide timely feedback.</Label><p className="text-destructive text-xs mt-1">{errors.agreeToShareMaterials?.message}</p></div>
+              <div><Label htmlFor="agreeToShareMaterials" className="font-normal">I agree to share required materials and provide timely feedback.</Label><p className="text-destructive text-xs mt-1">{errors.agreeToShareMaterials?.message}</p></div>
             </div>
           </CardContent>
         </Card>
