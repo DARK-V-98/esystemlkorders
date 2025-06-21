@@ -1,4 +1,5 @@
 
+
 export type OrderStatus =
   | 'Pending'
   | 'In Progress'
@@ -173,6 +174,7 @@ export interface Order {
   projectDetails?: ProjectDetailsForm;
   packageOrderDetails?: PackageOrderDetailsForm;
   paymentStatus: PaymentStatus; // Changed from optional to required
+  paymentGatewayDetails?: Record<string, any>; // To store response from payment gateway
 }
 
 export interface OrderFilters {

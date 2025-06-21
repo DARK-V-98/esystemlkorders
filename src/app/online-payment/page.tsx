@@ -1,10 +1,9 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/auth-context';
 import { generateFormattedOrderId } from '@/lib/utils';
 import {
@@ -18,9 +17,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Tag, ShieldCheck, Gem, CreditCard, AlertTriangle } from 'lucide-react';
+import { Tag, ShieldCheck, Gem, CreditCard, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import type { Order } from '@/types';
+
 
 interface PaymentPackage {
   id: string;
@@ -69,9 +72,11 @@ export default function OnlinePaymentPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [selectedPackage, setSelectedPackage] = useState<PaymentPackage | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const merchantId = process.env.NEXT_PUBLIC_PAYHERE_MERCHANT_ID;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 
   const handleBuyNowClick = (pkg: PaymentPackage) => {
     if (!user) {
@@ -83,7 +88,7 @@ export default function OnlinePaymentPage() {
       router.push('/login');
       return;
     }
-    if (!merchantId || !appUrl) {
+    if (!merchantId) {
       toast({
         variant: "destructive",
         title: "Configuration Error",
@@ -93,13 +98,112 @@ export default function OnlinePaymentPage() {
     }
     setSelectedPackage(pkg);
   };
+  
+  const proceedToPayment = async () => {
+    if (!selectedPackage || !user || !merchantId || !appUrl) {
+        setIsProcessing(false);
+        return;
+    };
 
-  const orderId = generateFormattedOrderId();
-  const userFirstName = user?.displayName?.split(' ')[0] || '';
-  const userLastName = user?.displayName?.split(' ').slice(1).join(' ') || '';
+    setIsProcessing(true);
+    const formattedOrderId = generateFormattedOrderId();
+    const amount = selectedPackage.priceLKR;
+    const currency = 'LKR';
+
+    const orderData: Omit<Order, 'id' | 'createdDate' | 'deadline' | 'projectDetails' | 'packageOrderDetails'> & { createdDate: any } = {
+        formattedOrderId: formattedOrderId,
+        clientName: user.displayName || user.email || 'N/A',
+        projectName: `Payment for ${selectedPackage.title}`,
+        projectType: 'Budget Package',
+        status: 'Waiting for Payment',
+        paymentStatus: 'Not Paid',
+        description: `Online payment submission for: ${selectedPackage.description}`,
+        requestedFeatures: selectedPackage.features.map(f => ({ id: f, name: f, price: 0, currency: 'lkr', currencySymbol: 'Rs.' })),
+        contactEmail: user.email || 'N/A',
+        budget: amount,
+        numberOfPages: 0,
+        selectedCurrency: 'lkr',
+        currencySymbol: 'Rs.',
+        userEmail: user.email || 'N/A',
+        createdDate: serverTimestamp(),
+    };
+
+    try {
+        await addDoc(collection(db, "orders"), orderData);
+
+        const response = await fetch('/api/generate-payhere-hash', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                order_id: formattedOrderId,
+                amount: amount,
+                currency: currency
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate payment hash. Please try again.');
+        }
+
+        const { hash } = await response.json();
+
+        if (!hash) {
+            throw new Error('Invalid payment hash received.');
+        }
+        
+        const form = formRef.current;
+        if (form) {
+            const createInput = (name: string, value: string) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                return input;
+            };
+            
+            form.innerHTML = '';
+            
+            const userFirstName = user?.displayName?.split(' ')[0] || '';
+            const userLastName = user?.displayName?.split(' ').slice(1).join(' ') || '';
+
+            const fields = {
+                merchant_id: merchantId,
+                return_url: `${appUrl}/payment/success`,
+                cancel_url: `${appUrl}/payment/cancel`,
+                notify_url: `${appUrl}/api/payment-notify`,
+                order_id: formattedOrderId,
+                items: selectedPackage.title,
+                currency: currency,
+                amount: String(amount),
+                first_name: userFirstName,
+                last_name: userLastName,
+                email: user.email || '',
+                phone: '',
+                address: '',
+                city: '',
+                country: 'Sri Lanka',
+                hash: hash
+            };
+
+            Object.entries(fields).forEach(([name, value]) => {
+                form.appendChild(createInput(name, value));
+            });
+
+            form.submit();
+        }
+
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Payment Initialization Failed",
+            description: error.message || "An unknown error occurred.",
+        });
+        setIsProcessing(false);
+    }
+  };
 
   return (
-    <AlertDialog open={!!selectedPackage} onOpenChange={(open) => !open && setSelectedPackage(null)}>
+    <AlertDialog open={!!selectedPackage} onOpenChange={(open) => {if (!open) setSelectedPackage(null)}}>
       <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         <header className="text-center mb-12">
           <div className="flex items-center justify-center space-x-3 mb-3">
@@ -112,14 +216,6 @@ export default function OnlinePaymentPage() {
             Securely pay for your selected package using PayHere.
           </p>
         </header>
-
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Important Security Notice</AlertTitle>
-          <AlertDescription>
-            For a production environment, the PayHere `hash` parameter must be generated on your server to protect your Merchant Secret. This prototype does not include server-side hash generation for simplicity. Do not deploy to production without implementing this server-side.
-          </AlertDescription>
-        </Alert>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {paymentPackages.map((pkg) => (
@@ -161,38 +257,17 @@ export default function OnlinePaymentPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Your Purchase</AlertDialogTitle>
               <AlertDialogDescription>
-                You are about to proceed to PayHere to purchase the <strong>{selectedPackage.title}</strong> for <strong>{selectedPackage.priceDisplay}</strong>.
+                You are about to be redirected to PayHere to purchase the <strong>{selectedPackage.title}</strong> for <strong>{selectedPackage.priceDisplay}</strong>.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <form action={PAYHERE_CHECKOUT_URL} method="post" id="payhere-form">
-              {/* These values should be dynamically generated and secured */}
-              <input type="hidden" name="merchant_id" value={merchantId || ''} />
-              <input type="hidden" name="return_url" value={`${appUrl}/payment/success`} />
-              <input type="hidden" name="cancel_url" value={`${appUrl}/payment/cancel`} />
-              <input type="hidden" name="notify_url" value={`${appUrl}/api/payment-notify`} />
+            
+            <form ref={formRef} action={PAYHERE_CHECKOUT_URL} method="post" id="payhere-form" />
 
-              {/* Order & Item Details */}
-              <input type="hidden" name="order_id" value={orderId} />
-              <input type="hidden" name="items" value={selectedPackage.title} />
-              <input type="hidden" name="currency" value="LKR" />
-              <input type="hidden" name="amount" value={selectedPackage.priceLKR} />
-
-              {/* Customer Details (pre-filled) */}
-              <input type="hidden" name="first_name" value={userFirstName} />
-              <input type="hidden" name="last_name" value={userLastName} />
-              <input type="hidden" name="email" value={user?.email || ''} />
-              <input type="hidden" name="phone" value="" />
-              <input type="hidden" name="address" value="" />
-              <input type="hidden" name="city" value="" />
-              <input type="hidden" name="country" value="Sri Lanka" />
-              
-              {/* HASH - IMPORTANT: Generate this on the server-side in production */}
-              {/* <input type="hidden" name="hash" value={generatedHash} /> */}
-            </form>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction asChild>
-                <button type="submit" form="payhere-form">Proceed to PayHere</button>
+              <AlertDialogCancel disabled={isProcessing} onClick={() => setSelectedPackage(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={proceedToPayment} disabled={isProcessing}>
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isProcessing ? 'Processing...' : 'Proceed to PayHere'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
