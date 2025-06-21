@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered, Palette, ExternalLink } from "lucide-react"; 
+import { Package, PlusCircle, Settings, Gem, ShieldCheck, LayoutDashboard, ListOrdered, Palette, ExternalLink, CreditCard } from "lucide-react"; 
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,13 @@ const menuItemsList: MenuItem[] = [
     description: "Design and order a unique website.",
     icon: Palette, 
     href: "/custom-website", 
+    allowedRoles: ['user', 'developer', 'admin'],
+  },
+  {
+    title: "Online Payments",
+    description: "Pay for services directly online.",
+    icon: CreditCard,
+    href: "/online-payment",
     allowedRoles: ['user', 'developer', 'admin'],
   },
   {
