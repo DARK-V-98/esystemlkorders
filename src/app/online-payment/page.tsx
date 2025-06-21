@@ -76,7 +76,7 @@ export default function OnlinePaymentPage() {
   const formRef = useRef<HTMLFormElement>(null);
 
   const merchantId = process.env.NEXT_PUBLIC_PAYHERE_MERCHANT_ID;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
   const handleBuyNowClick = (pkg: PaymentPackage) => {
     if (!user) {
@@ -142,13 +142,14 @@ export default function OnlinePaymentPage() {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to generate payment hash. Please try again.');
+            const errorData = await response.json().catch(() => ({ error: 'Failed to generate payment hash. Please try again.' }));
+            throw new Error(errorData.error || 'Failed to generate payment hash. Please try again.');
         }
 
         const { hash } = await response.json();
 
         if (!hash) {
-            throw new Error('Invalid payment hash received.');
+            throw new Error('Invalid payment hash received from server.');
         }
         
         const form = formRef.current;
@@ -163,8 +164,9 @@ export default function OnlinePaymentPage() {
             
             form.innerHTML = '';
             
-            const userFirstName = user?.displayName?.split(' ')[0] || '';
-            const userLastName = user?.displayName?.split(' ').slice(1).join(' ') || '';
+            const nameParts = user?.displayName?.split(' ') || [];
+            const userFirstName = nameParts[0] || '';
+            const userLastName = nameParts.slice(1).join(' ') || '';
 
             const fields = {
                 merchant_id: merchantId,
@@ -190,6 +192,8 @@ export default function OnlinePaymentPage() {
             });
 
             form.submit();
+        } else {
+            throw new Error("Could not find payment form reference. Please refresh and try again.");
         }
 
     } catch (error: any) {
