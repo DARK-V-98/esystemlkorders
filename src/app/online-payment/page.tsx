@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/auth-context';
@@ -15,7 +15,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tag, ShieldCheck, Gem, CreditCard, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -73,10 +72,19 @@ export default function OnlinePaymentPage() {
   const router = useRouter();
   const [selectedPackage, setSelectedPackage] = useState<PaymentPackage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [payhereData, setPayhereData] = useState<Record<string, string> | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const merchantId = process.env.NEXT_PUBLIC_PAYHERE_MERCHANT_ID;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  
+  useEffect(() => {
+    // This effect will run when payhereData is updated.
+    // It will submit the form automatically.
+    if (payhereData && formRef.current) {
+      formRef.current.submit();
+    }
+  }, [payhereData]);
+
 
   const handleBuyNowClick = (pkg: PaymentPackage) => {
     if (!user) {
@@ -100,8 +108,10 @@ export default function OnlinePaymentPage() {
   };
   
   const proceedToPayment = async () => {
+    const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
     if (!selectedPackage || !user || !merchantId || !appUrl) {
-        setIsProcessing(false);
+        toast({ variant: "destructive", title: "Error", description: "Missing required information to proceed." });
         return;
     };
 
@@ -152,49 +162,31 @@ export default function OnlinePaymentPage() {
             throw new Error('Invalid payment hash received from server.');
         }
         
-        const form = formRef.current;
-        if (form) {
-            const createInput = (name: string, value: string) => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                input.value = value;
-                return input;
-            };
-            
-            form.innerHTML = '';
-            
-            const nameParts = user?.displayName?.split(' ') || [];
-            const userFirstName = nameParts[0] || '';
-            const userLastName = nameParts.slice(1).join(' ') || '';
+        const nameParts = (user?.displayName || user?.email || '').split(' ');
+        const userFirstName = nameParts[0] || 'N/A';
+        const userLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'N/A';
 
-            const fields = {
-                merchant_id: merchantId,
-                return_url: `${appUrl}/payment/success`,
-                cancel_url: `${appUrl}/payment/cancel`,
-                notify_url: `${appUrl}/api/payment-notify`,
-                order_id: formattedOrderId,
-                items: selectedPackage.title,
-                currency: currency,
-                amount: String(amount),
-                first_name: userFirstName,
-                last_name: userLastName,
-                email: user.email || '',
-                phone: '',
-                address: '',
-                city: '',
-                country: 'Sri Lanka',
-                hash: hash
-            };
-
-            Object.entries(fields).forEach(([name, value]) => {
-                form.appendChild(createInput(name, value));
-            });
-
-            form.submit();
-        } else {
-            throw new Error("Could not find payment form reference. Please refresh and try again.");
-        }
+        const fields = {
+            merchant_id: merchantId,
+            return_url: `${appUrl}/payment/success`,
+            cancel_url: `${appUrl}/payment/cancel`,
+            notify_url: `${appUrl}/api/payment-notify`,
+            order_id: formattedOrderId,
+            items: selectedPackage.title,
+            currency: currency,
+            amount: String(amount),
+            first_name: userFirstName,
+            last_name: userLastName,
+            email: user.email || '',
+            phone: '',
+            address: '',
+            city: '',
+            country: 'Sri Lanka',
+            hash: hash
+        };
+        
+        // Instead of manipulating the DOM, we set state. The useEffect will handle the submission.
+        setPayhereData(fields);
 
     } catch (error: any) {
         toast({
@@ -202,7 +194,7 @@ export default function OnlinePaymentPage() {
             title: "Payment Initialization Failed",
             description: error.message || "An unknown error occurred.",
         });
-        setIsProcessing(false);
+        setIsProcessing(false); // Reset processing on error
     }
   };
 
@@ -264,11 +256,8 @@ export default function OnlinePaymentPage() {
                 You are about to be redirected to PayHere to purchase the <strong>{selectedPackage.title}</strong> for <strong>{selectedPackage.priceDisplay}</strong>.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            
-            <form ref={formRef} action={PAYHERE_CHECKOUT_URL} method="post" id="payhere-form" />
-
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isProcessing} onClick={() => setSelectedPackage(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={isProcessing} onClick={() => { setSelectedPackage(null); setIsProcessing(false); }}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={proceedToPayment} disabled={isProcessing}>
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {isProcessing ? 'Processing...' : 'Proceed to PayHere'}
@@ -277,6 +266,13 @@ export default function OnlinePaymentPage() {
           </AlertDialogContent>
         )}
       </div>
+
+      {/* This form is always in the DOM but hidden. It will be populated and submitted via state and useEffect. */}
+      <form ref={formRef} action={PAYHERE_CHECKOUT_URL} method="post" id="payhere-form" className="hidden">
+        {payhereData && Object.entries(payhereData).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+        ))}
+      </form>
     </AlertDialog>
   );
 }
