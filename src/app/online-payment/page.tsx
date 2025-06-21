@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tag, ShieldCheck, Gem, CreditCard, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 interface PaymentPackage {
