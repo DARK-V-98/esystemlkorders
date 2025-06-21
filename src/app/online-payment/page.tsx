@@ -15,6 +15,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tag, ShieldCheck, Gem, CreditCard, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
